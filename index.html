@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: #fff;
+  }
+
+  /* Apply filter to canvas */
+  canvas#canvas {
+    filter: url(#noiseFilter);
+  }
+</style>
+</head>
+<body>
+
+  <svg width="0" height="0" style="position:absolute">
+    <filter id="noiseFilter">
+      <!-- Create fractal noise -->
+      <feTurbulence type="fractalNoise" baseFrequency="5.4" numOctaves="4" result="noise" />
+      <!-- Turn to grayscale -->
+      <feColorMatrix in="noise" type="saturate" values="0" result="grayNoise" />
+      <!-- Reduce intensity slightly -->
+      <feComponentTransfer in="grayNoise" result="dimNoise">
+        <feFuncA type="linear" slope="0.12"/>
+      </feComponentTransfer>
+      <!-- Blend over the canvas -->
+      <feBlend in="SourceGraphic" in2="dimNoise" mode="overlay" />
+    </filter>
+  </svg>
+
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script> -->
+<script src="sketch.js"></script>
+<script src="p5.js"></script>
+
+<script src="Random.js"></script>
+<script src="../common.js"></script>
+
+</body>
+</html>
