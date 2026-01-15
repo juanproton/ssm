@@ -1,47 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-  body {
-    margin: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background: #fff;
-  }
+  <meta charset="utf-8" />
+  <title>Juan V — Art</title>
 
-  /* Apply filter to canvas */
-  canvas#canvas {
-    filter: url(#noiseFilter);
-  }
-</style>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #ffffff;
+      color: #000000;
+    }
+
+    nav {
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: black;
+      font-size: 16px;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    .content {
+      padding: 20px;
+    }
+  </style>
 </head>
+
 <body>
 
-  <svg width="0" height="0" style="position:absolute">
-    <filter id="noiseFilter">
-      <!-- Create fractal noise -->
-      <feTurbulence type="fractalNoise" baseFrequency="5.4" numOctaves="4" result="noise" />
-      <!-- Turn to grayscale -->
-      <feColorMatrix in="noise" type="saturate" values="0" result="grayNoise" />
-      <!-- Reduce intensity slightly -->
-      <feComponentTransfer in="grayNoise" result="dimNoise">
-        <feFuncA type="linear" slope="0.12"/>
-      </feComponentTransfer>
-      <!-- Blend over the canvas -->
-      <feBlend in="SourceGraphic" in2="dimNoise" mode="overlay" />
-    </filter>
-  </svg>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="bio.html">Bio</a>
+    <a href="explorations.html">Explorations</a>
+  </nav>
 
-<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script> -->
-<script src="sketch.js"></script>
-<script src="p5.js"></script>
-
-<script src="Random.js"></script>
-<script src="../common.js"></script>
+  <div class="content">
+    <h1>Juan V</h1>
+    <p>
+      Personal space for visual experiments, generative systems and artworks.
+    </p>
+  </div>
 
 </body>
 </html>
