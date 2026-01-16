@@ -1,100 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<title>Juan Pedro Vallejo</title>
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-
-<style>
-body {
-  margin: 0;
-  font-family: Helvetica, sans-serif;
-  overflow: hidden;
-}
-
-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  gap: 20px;
-  padding: 20px;
-  background: white;
-  z-index: 10;
-}
-
-nav a {
-  cursor: pointer;
-}
-
-#wrapper {
-  transition: transform 0.8s ease;
-}
-
-.section {
-  width: 100vw;
-  height: 100vh;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  font-size: 32px;
-  text-align: center;
-  white-space: pre-line;
-}
-
-#init { background: #e3e3ff; }
-#art  { background: #e3ffe3; }
-#who  { background: #ffe3e3; }
-
-#p5-container {
-  width: 100%;
-  height: 100%;
-}
-</style>
-</head>
-
-<body>
-
-<nav>
-  <a onclick="goTo(0)">INIT</a>
-  <a onclick="goTo(1)">ART</a>
-  <a onclick="goTo(2)">WHO</a>
-</nav>
-
-<div id="wrapper">
-
-  <div class="section" id="init">
-    <div id="p5-container"></div>
-  </div>
-
-  <div class="section" id="art">
-    ART
-  </div>
-
-  <div class="section" id="who">
-JUAN PEDRO VALLEJO
-1993. ARGENTINA
-  </div>
-
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
-<script src="Random.js"></script>
-<script src="sketch.js"></script>
-
 <script>
 let current = 0;
 let isMoving = false;
-
-// ───────── CONFIG DE SENSIBILIDAD ─────────
-const WHEEL_THRESHOLD = 140;   // más alto = más pesado
-const TOUCH_THRESHOLD = 90;    // swipe menos sensible
-const ANIM_TIME = 900;
-// ─────────────────────────────────────────
 
 function apply() {
   const w = document.getElementById("wrapper");
@@ -107,68 +13,58 @@ function goTo(i) {
 }
 
 // ===== DESKTOP / TRACKPAD =====
-
-let wheelAccum = 0;
+// UN SOLO EVENTO = UN SOLO SALTO
 
 window.addEventListener("wheel", e => {
+  e.preventDefault();        // clave para trackpads con inercia
   if (isMoving) return;
-
-  wheelAccum += e.deltaY;
-
-  if (Math.abs(wheelAccum) < WHEEL_THRESHOLD) return;
 
   isMoving = true;
 
-  if (wheelAccum > 0) current++;
-  else current--;
-
-  wheelAccum = 0;
+  if (e.deltaY > 0) current += 1;
+  if (e.deltaY < 0) current -= 1;
 
   current = Math.max(0, Math.min(2, current));
 
   apply();
 
-  setTimeout(() => isMoving = false, ANIM_TIME);
-});
+  setTimeout(() => {
+    isMoving = false;
+  }, 900);
+}, { passive: false });
 
 
-// ===== MOBILE SWIPE =====
+// ===== MOBILE =====
+// CUALQUIER SWIPE = 1 SALTO
 
 let startY = 0;
-let deltaY = 0;
 
 window.addEventListener("touchstart", e => {
   startY = e.touches[0].clientY;
 });
 
-window.addEventListener("touchmove", e => {
-  deltaY = e.touches[0].clientY - startY;
-});
-
-window.addEventListener("touchend", () => {
+window.addEventListener("touchend", e => {
   if (isMoving) return;
 
-  if (Math.abs(deltaY) < TOUCH_THRESHOLD) {
-    deltaY = 0;
-    return;
-  }
+  let endY = e.changedTouches[0].clientY;
+  let delta = endY - startY;
+
+  // si casi no hubo movimiento, no hacemos nada
+  if (Math.abs(delta) < 10) return;
 
   isMoving = true;
 
-  if (deltaY < 0) current++;
-  else current--;
+  if (delta < 0) current += 1;
+  else current -= 1;
 
   current = Math.max(0, Math.min(2, current));
 
   apply();
 
-  setTimeout(() => isMoving = false, ANIM_TIME);
-
-  deltaY = 0;
+  setTimeout(() => {
+    isMoving = false;
+  }, 900);
 });
 
 window.addEventListener("resize", apply);
 </script>
-
-</body>
-</html>
