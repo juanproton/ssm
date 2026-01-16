@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>VALLEJO</title>
+<title>Juan Pedro Vallejo</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
@@ -30,7 +30,7 @@ nav a {
 }
 
 #wrapper {
-  transition: transform 0.7s ease;
+  transition: transform 0.8s ease;
 }
 
 .section {
@@ -41,12 +41,14 @@ nav a {
   justify-content: center;
   align-items: center;
 
-  font-size: 40px;
+  font-size: 32px;
+  text-align: center;
+  white-space: pre-line;
 }
 
 #init { background: #e3e3ff; }
-#who  { background: #ffe3e3; }
 #art  { background: #e3ffe3; }
+#who  { background: #ffe3e3; }
 
 #p5-container {
   width: 100%;
@@ -59,8 +61,8 @@ nav a {
 
 <nav>
   <a onclick="goTo(0)">INIT</a>
-  <a onclick="goTo(1)">WHO</a>
-  <a onclick="goTo(2)">ART</a>
+  <a onclick="goTo(1)">ART</a>
+  <a onclick="goTo(2)">WHO</a>
 </nav>
 
 <div id="wrapper">
@@ -69,8 +71,14 @@ nav a {
     <div id="p5-container"></div>
   </div>
 
-  <div class="section" id="who">WHO</div>
-  <div class="section" id="art">ART</div>
+  <div class="section" id="art">
+    ART
+  </div>
+
+  <div class="section" id="who">
+JUAN PEDRO VALLEJO
+1993. ARGENTINA
+  </div>
 
 </div>
 
@@ -82,6 +90,12 @@ nav a {
 let current = 0;
 let isMoving = false;
 
+// ───────── CONFIG DE SENSIBILIDAD ─────────
+const WHEEL_THRESHOLD = 140;   // más alto = más pesado
+const TOUCH_THRESHOLD = 90;    // swipe menos sensible
+const ANIM_TIME = 900;
+// ─────────────────────────────────────────
+
 function apply() {
   const w = document.getElementById("wrapper");
   w.style.transform = `translateY(${-current * window.innerHeight}px)`;
@@ -92,21 +106,29 @@ function goTo(i) {
   apply();
 }
 
-// ===== DESKTOP WHEEL =====
+// ===== DESKTOP / TRACKPAD =====
+
+let wheelAccum = 0;
 
 window.addEventListener("wheel", e => {
   if (isMoving) return;
 
+  wheelAccum += e.deltaY;
+
+  if (Math.abs(wheelAccum) < WHEEL_THRESHOLD) return;
+
   isMoving = true;
 
-  if (e.deltaY > 0) current++;
+  if (wheelAccum > 0) current++;
   else current--;
+
+  wheelAccum = 0;
 
   current = Math.max(0, Math.min(2, current));
 
   apply();
 
-  setTimeout(() => isMoving = false, 750);
+  setTimeout(() => isMoving = false, ANIM_TIME);
 });
 
 
@@ -126,7 +148,10 @@ window.addEventListener("touchmove", e => {
 window.addEventListener("touchend", () => {
   if (isMoving) return;
 
-  if (Math.abs(deltaY) < 50) return;
+  if (Math.abs(deltaY) < TOUCH_THRESHOLD) {
+    deltaY = 0;
+    return;
+  }
 
   isMoving = true;
 
@@ -137,7 +162,7 @@ window.addEventListener("touchend", () => {
 
   apply();
 
-  setTimeout(() => isMoving = false, 750);
+  setTimeout(() => isMoving = false, ANIM_TIME);
 
   deltaY = 0;
 });
