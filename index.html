@@ -95,12 +95,11 @@ nav a {
 <script src="Random.js"></script>
 <script src="sketch.js"></script>
 
-<!-- ─── SCROLL SYSTEM ────────────────── -->
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
   let current = 0;
-  let isMoving = false;
+  let locked = false;
 
   const w = document.getElementById("wrapper");
 
@@ -114,18 +113,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ─────────────────────────────────────────────
-  // DESKTOP — 1 GESTO = 1 PÁGINA REAL
+  // DESKTOP — ANTI MULTI FIRE REAL
   // ─────────────────────────────────────────────
-  let wheelLocked = false;
 
   window.addEventListener("wheel", e => {
     e.preventDefault();
 
-    if (isMoving || wheelLocked) return;
+    // 🔒 Si está bloqueado, IGNORAR TODO
+    if (locked) return;
 
-    wheelLocked = true;
-    isMoving = true;
+    locked = true;
 
+    // Solo miramos el signo, nada más
     if (e.deltaY > 0) current += 1;
     else current -= 1;
 
@@ -133,10 +132,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     apply();
 
+    // Desbloqueo después de animación
     setTimeout(() => {
-      isMoving = false;
-      wheelLocked = false;
-    }, 1000);
+      locked = false;
+    }, 1100);
 
   }, { passive: false });
 
@@ -144,6 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ─────────────────────────────────────────────
   // MOBILE — 1 SWIPE = 1 PÁGINA
   // ─────────────────────────────────────────────
+
   let startY = 0;
 
   window.addEventListener("touchstart", e => {
@@ -151,14 +151,14 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   window.addEventListener("touchend", e => {
-    if (isMoving) return;
+    if (locked) return;
 
     let endY = e.changedTouches[0].clientY;
     let delta = endY - startY;
 
     if (Math.abs(delta) < 10) return;
 
-    isMoving = true;
+    locked = true;
 
     if (delta < 0) current += 1;
     else current -= 1;
@@ -167,8 +167,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     apply();
 
-    setTimeout(() => isMoving = false, 900);
+    setTimeout(() => locked = false, 900);
   });
+
+
+  window.addEventListener("resize", apply);
+
+});
+</script>
 
 
   // ─────────────────────────────────────────────
