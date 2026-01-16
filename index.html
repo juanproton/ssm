@@ -113,25 +113,37 @@ document.addEventListener("DOMContentLoaded", () => {
     apply();
   }
 
-  // ─── DESKTOP ────────────────────────
+  // ─────────────────────────────────────────────
+  // DESKTOP — 1 GESTO = 1 PÁGINA REAL
+  // ─────────────────────────────────────────────
+  let wheelLocked = false;
+
   window.addEventListener("wheel", e => {
     e.preventDefault();
-    if (isMoving) return;
 
+    if (isMoving || wheelLocked) return;
+
+    wheelLocked = true;
     isMoving = true;
 
     if (e.deltaY > 0) current += 1;
-    if (e.deltaY < 0) current -= 1;
+    else current -= 1;
 
     current = Math.max(0, Math.min(2, current));
 
     apply();
 
-    setTimeout(() => isMoving = false, 900);
+    setTimeout(() => {
+      isMoving = false;
+      wheelLocked = false;
+    }, 1000);
+
   }, { passive: false });
 
 
-  // ─── MOBILE ─────────────────────────
+  // ─────────────────────────────────────────────
+  // MOBILE — 1 SWIPE = 1 PÁGINA
+  // ─────────────────────────────────────────────
   let startY = 0;
 
   window.addEventListener("touchstart", e => {
@@ -144,7 +156,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let endY = e.changedTouches[0].clientY;
     let delta = endY - startY;
 
-    // gesto mínimo
     if (Math.abs(delta) < 10) return;
 
     isMoving = true;
@@ -159,6 +170,10 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => isMoving = false, 900);
   });
 
+
+  // ─────────────────────────────────────────────
+  // FIX RESIZE
+  // ─────────────────────────────────────────────
   window.addEventListener("resize", apply);
 
 });
