@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Juan Pedro Vallejo</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Helvetica, sans-serif;
+  overflow: hidden;
+}
+
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  background: white;
+  border-bottom: 1px solid #ddd;
+  z-index: 10;
+}
+
+nav a {
+  text-decoration: none;
+  color: black;
+}
+
+.container {
+  height: 100vh;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+}
+
+.section {
+  height: 100vh;
+  scroll-snap-align: start;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 40px;
+}
+
+#init { background: #ff4d4d; }
+#who  { background: #4d7fff; }
+#art  { background: #4dff88; }
+</style>
+</head>
+
+<body>
+
+<nav>
+  <a href="#init">INIT</a>
+  <a href="#who">WHO</a>
+  <a href="#art">ART</a>
+</nav>
+
+<div class="container" id="scroller">
+
+  <section class="section" id="init">
+    INIT
+  </section>
+
+  <section class="section" id="who">
+    WHO
+  </section>
+
+  <section class="section" id="art">
+    ART
+  </section>
+
+</div>
+
+<script>
+// loop infinito visual
+const scroller = document.getElementById("scroller");
+
+scroller.addEventListener("scroll", () => {
+  const h = window.innerHeight;
+
+  if (scroller.scrollTop + h >= scroller.scrollHeight) {
+    scroller.scrollTop = 1;
+  }
+
+  if (scroller.scrollTop <= 0) {
+    scroller.scrollTop = scroller.scrollHeight - h - 1;
+  }
+});
+</script>
+
+</body>
+</html>
