@@ -4,6 +4,9 @@
 <meta charset="utf-8" />
 <title>Vallejo</title>
 
+<!-- P5 -->
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+
 <style>
 body {
   margin: 0;
@@ -43,13 +46,18 @@ nav a {
   display: flex;
   align-items: center;
   justify-content: center;
-
-  font-size: 40px;
+  position: relative;
 }
 
-#init { background: #ff4d4d; }
+/* WHO y ART quedan con color de prueba */
 #who  { background: #4d7fff; }
 #art  { background: #4dff88; }
+
+/* el canvas de p5 */
+#p5-holder {
+  position: absolute;
+  inset: 0;
+}
 </style>
 </head>
 
@@ -63,23 +71,105 @@ nav a {
 
 <div class="container" id="scroller">
 
-  <section class="section" id="init">INIT</section>
+  <section class="section" id="init">
+    <div id="p5-holder"></div>
+  </section>
+
   <section class="section" id="who">WHO</section>
+
   <section class="section" id="art">ART</section>
 
 </div>
 
+<!-- ================= TU SKETCH ================= -->
 <script>
+
+let s;
+let DIM = Math.min(window.innerWidth, window.innerHeight);
+let asp = 1/1;
+
+let r;
+let tokenData = genTokenData(123);
+let tokenData2 = {
+  hash: "0xc144330ad3cbb9ef2fc39bfa89099338ad16457444074575ff94051043b91f92",
+  tokenId: "15000000"
+};
+
+function genTokenData(projectNum) {
+  let data = {};
+  let hash = "0x";
+  for (var i = 0; i < 64; i++) {
+    hash += Math.floor(Math.random() * 16).toString(16);
+  }
+  data.hash = hash;
+  data.tokenId = (projectNum * 1000000 + Math.floor(Math.random() * 600)).toString();
+  return data;
+}
+
+let uniformPasser;
+
+function setup() {
+
+  const holder = document.getElementById("p5-holder");
+  const w = holder.offsetWidth;
+  const h = holder.offsetHeight;
+
+  const cnv = createCanvas(w, h, WEBGL);
+  cnv.parent("p5-holder");
+
+  r = new Random(tokenData2);
+
+  pixelDensity(2);
+  rectMode(CENTER);
+
+  s = createShader(
+  `
+  attribute vec3 aPosition;
+  attribute vec2 aTexCoord;
+  varying vec2 vTC;
+
+  void main() {
+    vec4 positionVec4 = vec4(aPosition, 1.0);
+    vTC=aTexCoord;
+    positionVec4.xy = positionVec4.xy * 2.0 - 1.0;
+    gl_Position = positionVec4;
+  }`,
+  `
+  precision highp float;
+  uniform vec2 resolution;
+
+  void main() {
+    vec2 uv = gl_FragCoord.xy / resolution.xy;
+    gl_FragColor = vec4(uv.x, uv.y, 0.5, 1.0);
+  }`
+  );
+
+}
+
+function draw() {
+  shader(s);
+  rect(0,0,width,height);
+}
+
+function windowResized() {
+  const holder = document.getElementById("p5-holder");
+  resizeCanvas(holder.offsetWidth, holder.offsetHeight);
+}
+
+</script>
+
+<!-- ============================================= -->
+
+<script>
+// bloqueo de scroll hacia abajo al llegar a ART
 const scroller = document.getElementById("scroller");
 
 scroller.addEventListener("wheel", (e) => {
   const h = window.innerHeight;
-  const maxScroll = h * 2;   // position of section 3
+  const maxScroll = h * 2;
 
-  // if we are at section 3 and user scrolls DOWN → block it
   if (scroller.scrollTop >= maxScroll && e.deltaY > 0) {
     e.preventDefault();
-    return false;
   }
 }, { passive: false });
 </script>
