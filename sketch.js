@@ -88,7 +88,7 @@ canvas.parent("p5-container");
       vec3 final = pulseOsc(vFreq, u_time + vTimeOffset, d);
       vec3 final2 = pulseOsc(vFreq, u_time + vTimeOffset, d2);
 
-      gl_FragColor = vec4(final+=final2, 1.0);
+      gl_FragColor = vec4(final, 1.0);
     }
   `;
 
