@@ -4,11 +4,21 @@
 <meta charset="utf-8" />
 <title>Juan Pedro Vallejo</title>
 
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
 <style>
-body {
+html, body {
   margin: 0;
+  padding: 0;
   font-family: Helvetica, sans-serif;
+
+  /* CRUCIAL PARA MOBILE */
   overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+
+  touch-action: none;
 }
 
 nav {
@@ -32,9 +42,11 @@ nav a {
 .section {
   width: 100vw;
   height: 100vh;
+
   display: flex;
   justify-content: center;
   align-items: center;
+
   font-size: 40px;
 }
 
@@ -79,15 +91,12 @@ nav a {
 <script src="Random.js"></script>
 <script src="sketch.js"></script>
 
-<!-- SCROLL SYSTEM -->
 <script>
 let current = 0;
 let isMoving = false;
 
-// ───────────────── CONFIG ─────────────────
-const SCROLL_THRESHOLD = 90;   // más alto = scroll más pesado
-const ANIM_TIME = 750;
-// ───────────────────────────────────────────
+const SCROLL_THRESHOLD = 70;
+const ANIM_TIME = 700;
 
 function goTo(i) {
   current = Math.max(0, Math.min(2, i));
@@ -98,7 +107,7 @@ function goTo(i) {
   });
 }
 
-// ===== DESKTOP / TRACKPAD =====
+// ===== DESKTOP =====
 let wheelAccum = 0;
 
 window.addEventListener("wheel", (e) => {
@@ -120,24 +129,39 @@ window.addEventListener("wheel", (e) => {
 });
 
 
-// ===== MOBILE TOUCH =====
+// ===== MOBILE TOUCH (REAL) =====
+
 let touchStartY = 0;
-let touchDelta = 0;
+let touchCurrentY = 0;
+let touching = false;
 
 window.addEventListener("touchstart", (e) => {
+  touching = true;
   touchStartY = e.touches[0].clientY;
-});
+}, { passive: false });
 
 window.addEventListener("touchmove", (e) => {
-  touchDelta = e.touches[0].clientY - touchStartY;
-});
+  if (!touching) return;
+
+  touchCurrentY = e.touches[0].clientY;
+
+  e.preventDefault();
+}, { passive: false });
 
 window.addEventListener("touchend", () => {
-  if (isMoving) return;
+  if (isMoving) {
+    touching = false;
+    return;
+  }
 
-  if (Math.abs(touchDelta) < 60) return;
+  let delta = touchCurrentY - touchStartY;
 
-  if (touchDelta < 0) current++;
+  if (Math.abs(delta) < 50) {
+    touching = false;
+    return;
+  }
+
+  if (delta < 0) current++;
   else current--;
 
   isMoving = true;
@@ -145,14 +169,17 @@ window.addEventListener("touchend", () => {
 
   setTimeout(() => isMoving = false, ANIM_TIME);
 
-  touchDelta = 0;
+  touching = false;
 });
 
 
-// ===== FIX AL ROTAR / RESIZE =====
+// ===== SAFETY =====
 window.addEventListener("resize", () => {
   goTo(current);
 });
+
+// evitar bounce iOS
+document.addEventListener("gesturestart", (e) => e.preventDefault());
 </script>
 
 </body>
