@@ -129,8 +129,8 @@ canvas.parent("p5-container");
     let vx = random(-0.1, 0.1);
     let vy = random(-0.1, 0.1);
     let rs = random(-PI, PI);
-    let to = random(0, 10);
-    let freq = random(20.0, 20.0); // or any range of frequencies you like
+    let to = random(0, 13);
+    let freq = random(25.0, 25.0); // or any range of frequencies you like
 
     for (let v = 0; v < 6; v++) {
       posData.push(...basePos[v]);
