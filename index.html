@@ -78,18 +78,32 @@ nav a {
 </div>
 
 <script>
-// loop infinito visual
 const scroller = document.getElementById("scroller");
 
-scroller.addEventListener("scroll", () => {
-  const h = window.innerHeight;
+let looping = false;
 
-  if (scroller.scrollTop + h >= scroller.scrollHeight) {
+scroller.addEventListener("scroll", () => {
+  if (looping) return;
+
+  const h = window.innerHeight;
+  const max = scroller.scrollHeight;
+
+  // ---- LOOP AL FINAL ----
+  if (scroller.scrollTop + h >= max - 2) {
+    looping = true;
     scroller.scrollTop = 1;
+    setTimeout(() => {
+      looping = false;
+    }, 60);
   }
 
-  if (scroller.scrollTop <= 0) {
-    scroller.scrollTop = scroller.scrollHeight - h - 1;
+  // ---- LOOP AL INICIO ----
+  if (scroller.scrollTop <= 1) {
+    looping = true;
+    scroller.scrollTop = max - h - 2;
+    setTimeout(() => {
+      looping = false;
+    }, 60);
   }
 });
 </script>
