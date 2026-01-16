@@ -1,48 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Juan Pedro Vallejo — Art</title>
+<meta charset="utf-8" />
+<title>Juan Pedro Vallejo — INIT</title>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Helvetica, sans-serif;
-      background: #ffffff;
-      color: #000000;
-    }
+<style>
+body {
+  margin: 0;
+  font-family: Helvetica, sans-serif;
+}
 
-    nav {
-      display: flex;
-      gap: 20px;
-      padding: 20px;
-      border-bottom: 1px solid #ddd;
-    }
+nav {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  border-bottom: 1px solid #ddd;
+}
 
-    nav a {
-      text-decoration: none;
-      color: black;
-      font-size: 16px;
-    }
+nav a {
+  text-decoration: none;
+  color: black;
+}
 
-    nav a:hover {
-      text-decoration: underline;
-    }
-
-    .content {
-      padding: 20px;
-    }
-  </style>
+.page {
+  height: calc(100vh - 60px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  background: #ff4d4d; /* color INIT */
+}
+</style>
 </head>
 
 <body>
 
-  <nav>
-    <a href="index.html">INIT</a>
-    <a href="who.html">WHO</a>
-    <a href="art.html">ART</a>
-  </nav>
+<nav>
+  <a href="index.html">INIT</a>
+  <a href="who.html">WHO</a>
+  <a href="art.html">ART</a>
+</nav>
 
+<div class="page">
+  INIT
+</div>
+
+<script>
+const pages = ["index.html", "who.html", "art.html"];
+
+let locked = false;
+
+function navigate(dir) {
+  if (locked) return;
+  locked = true;
+
+  let current = location.pathname.split("/").pop();
+  let i = pages.indexOf(current);
+
+  if (i === -1) i = 0;
+
+  let next = (i + dir + pages.length) % pages.length;
+
+  location.href = pages[next];
+}
+
+window.addEventListener("wheel", (e) => {
+  if (Math.abs(e.deltaY) < 10) return;
+
+  if (e.deltaY > 0) navigate(1);
+  else navigate(-1);
+});
+</script>
 
 </body>
 </html>
