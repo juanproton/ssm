@@ -2,23 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Juan Pedro Vallejo</title>
+<title>VALLEJO</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <style>
-html, body {
+body {
   margin: 0;
-  padding: 0;
   font-family: Helvetica, sans-serif;
-
-  /* CRUCIAL PARA MOBILE */
   overflow: hidden;
-  position: fixed;
-  width: 100%;
-  height: 100%;
-
-  touch-action: none;
 }
 
 nav {
@@ -34,9 +26,11 @@ nav {
 }
 
 nav a {
-  text-decoration: none;
-  color: black;
   cursor: pointer;
+}
+
+#wrapper {
+  transition: transform 0.7s ease;
 }
 
 .section {
@@ -57,7 +51,6 @@ nav a {
 #p5-container {
   width: 100%;
   height: 100%;
-  position: relative;
 }
 </style>
 </head>
@@ -76,17 +69,11 @@ nav a {
     <div id="p5-container"></div>
   </div>
 
-  <div class="section" id="who">
-    WHO
-  </div>
-
-  <div class="section" id="art">
-    ART
-  </div>
+  <div class="section" id="who">WHO</div>
+  <div class="section" id="art">ART</div>
 
 </div>
 
-<!-- LIBS -->
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
 <script src="Random.js"></script>
 <script src="sketch.js"></script>
@@ -95,91 +82,67 @@ nav a {
 let current = 0;
 let isMoving = false;
 
-const SCROLL_THRESHOLD = 70;
-const ANIM_TIME = 700;
+function apply() {
+  const w = document.getElementById("wrapper");
+  w.style.transform = `translateY(${-current * window.innerHeight}px)`;
+}
 
 function goTo(i) {
   current = Math.max(0, Math.min(2, i));
-
-  window.scrollTo({
-    top: window.innerHeight * current,
-    behavior: "smooth"
-  });
+  apply();
 }
 
-// ===== DESKTOP =====
-let wheelAccum = 0;
+// ===== DESKTOP WHEEL =====
 
-window.addEventListener("wheel", (e) => {
+window.addEventListener("wheel", e => {
   if (isMoving) return;
 
-  wheelAccum += e.deltaY;
+  isMoving = true;
 
-  if (Math.abs(wheelAccum) < SCROLL_THRESHOLD) return;
-
-  if (wheelAccum > 0) current++;
+  if (e.deltaY > 0) current++;
   else current--;
 
-  wheelAccum = 0;
+  current = Math.max(0, Math.min(2, current));
 
-  isMoving = true;
-  goTo(current);
+  apply();
 
-  setTimeout(() => isMoving = false, ANIM_TIME);
+  setTimeout(() => isMoving = false, 750);
 });
 
 
-// ===== MOBILE TOUCH (REAL) =====
+// ===== MOBILE SWIPE =====
 
-let touchStartY = 0;
-let touchCurrentY = 0;
-let touching = false;
+let startY = 0;
+let deltaY = 0;
 
-window.addEventListener("touchstart", (e) => {
-  touching = true;
-  touchStartY = e.touches[0].clientY;
-}, { passive: false });
+window.addEventListener("touchstart", e => {
+  startY = e.touches[0].clientY;
+});
 
-window.addEventListener("touchmove", (e) => {
-  if (!touching) return;
-
-  touchCurrentY = e.touches[0].clientY;
-
-  e.preventDefault();
-}, { passive: false });
+window.addEventListener("touchmove", e => {
+  deltaY = e.touches[0].clientY - startY;
+});
 
 window.addEventListener("touchend", () => {
-  if (isMoving) {
-    touching = false;
-    return;
-  }
+  if (isMoving) return;
 
-  let delta = touchCurrentY - touchStartY;
-
-  if (Math.abs(delta) < 50) {
-    touching = false;
-    return;
-  }
-
-  if (delta < 0) current++;
-  else current--;
+  if (Math.abs(deltaY) < 50) return;
 
   isMoving = true;
-  goTo(current);
 
-  setTimeout(() => isMoving = false, ANIM_TIME);
+  if (deltaY < 0) current++;
+  else current--;
 
-  touching = false;
+  current = Math.max(0, Math.min(2, current));
+
+  apply();
+
+  setTimeout(() => isMoving = false, 750);
+
+  deltaY = 0;
 });
 
-
-// ===== SAFETY =====
-window.addEventListener("resize", () => {
-  goTo(current);
-});
-
-// evitar bounce iOS
-document.addEventListener("gesturestart", (e) => e.preventDefault());
+window.addEventListener("resize", apply);
 </script>
 
 </body>
