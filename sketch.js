@@ -117,7 +117,7 @@ canvas.parent("p5-container");
     [-1, -1], [ 1,  1], [-1,  1],
   ];
 
-  const numParticles = 2000;
+  const numParticles = 1500;
   let posData = [], uvData = [], offData = [], sizeData = [],
       idData = [], velData = [], rotSpeedData = [], timeOffsetData = [];
       let freqData = [];
@@ -130,7 +130,7 @@ canvas.parent("p5-container");
     let vy = random(-0.1, 0.1);
     let rs = random(-PI, PI);
     let to = random(0, 10);
-    let freq = random(40.0, 40.0); // or any range of frequencies you like
+    let freq = random(20.0, 20.0); // or any range of frequencies you like
 
     for (let v = 0; v < 6; v++) {
       posData.push(...basePos[v]);
