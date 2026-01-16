@@ -5,7 +5,9 @@ let tokenData
 
 function setup() {
   // createCanvas(DIM, DIM, WEBGL);
-  createCanvas(windowWidth, windowHeight, WEBGL);
+
+  let canvas = createCanvas(w, h, WEBGL);
+canvas.parent("p5-container");
 
   noStroke();
 
