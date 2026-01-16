@@ -45,17 +45,43 @@ nav a {
   align-items: center;
   font-size: 32px;
   text-align: center;
+  flex-direction: column;
 }
 
-#init { background: #e3e3ff; }
-#art  { background: #e3ffe3; }
-#who  { background: #ffe3e3; }
+#init      { background: #e3e3ff; }
+#art       { background: #e3ffe3; }
+#who       { background: #ffe3e3; }
+#subscribe { background: #f5e3ff; }
 
 /* ─── P5 ─────────────────────────────── */
 #p5-container {
   width: 100%;
   height: 100%;
   position: relative;
+}
+
+/* ─── FORM ───────────────────────────── */
+form {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+input[type="email"] {
+  padding: 10px;
+  font-size: 16px;
+  width: 260px;
+}
+
+button {
+  padding: 10px 16px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+#msg {
+  margin-top: 15px;
+  font-size: 14px;
 }
 </style>
 </head>
@@ -66,6 +92,7 @@ nav a {
   <a onclick="goTo(0)">INIT</a>
   <a onclick="goTo(1)">ART</a>
   <a onclick="goTo(2)">WHO</a>
+  <a onclick="goTo(3)">SUBSCRIBE</a>
 </nav>
 
 <div id="wrapper">
@@ -84,6 +111,21 @@ nav a {
   <div class="section" id="who">
     <div>
       JUAN PEDRO VALLEJO<br>
+      1993. ARGENTINA
+    </div>
+  </div>
+
+  <!-- ─── SUBSCRIBE ─────────────────── -->
+  <div class="section" id="subscribe">
+    <div>
+      Subscribe to newsletter
+
+      <form onsubmit="subscribe(event)">
+        <input type="email" id="mail" placeholder="your@email.com" required />
+        <button>Subscribe</button>
+      </form>
+
+      <div id="msg"></div>
     </div>
   </div>
 
@@ -107,31 +149,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   window.goTo = function(i) {
-    current = Math.max(0, Math.min(2, i));
+    current = Math.max(0, Math.min(3, i));
     apply();
   }
 
-  // ─────────────────────────────────────────────
-  // DESKTOP — ANTI MULTI FIRE REAL
-  // ─────────────────────────────────────────────
-
+  // ─── DESKTOP ────────────────────────
   window.addEventListener("wheel", e => {
     e.preventDefault();
-
-    // 🔒 Si está bloqueado, IGNORAR TODO
     if (locked) return;
 
     locked = true;
 
-    // Solo miramos el signo, nada más
     if (e.deltaY > 0) current += 1;
     else current -= 1;
 
-    current = Math.max(0, Math.min(2, current));
+    current = Math.max(0, Math.min(3, current));
 
     apply();
 
-    // Desbloqueo después de animación
     setTimeout(() => {
       locked = false;
     }, 1100);
@@ -139,10 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }, { passive: false });
 
 
-  // ─────────────────────────────────────────────
-  // MOBILE — 1 SWIPE = 1 PÁGINA
-  // ─────────────────────────────────────────────
-
+  // ─── MOBILE ─────────────────────────
   let startY = 0;
 
   window.addEventListener("touchstart", e => {
@@ -162,26 +194,28 @@ document.addEventListener("DOMContentLoaded", () => {
     if (delta < 0) current += 1;
     else current -= 1;
 
-    current = Math.max(0, Math.min(2, current));
+    current = Math.max(0, Math.min(3, current));
 
     apply();
 
     setTimeout(() => locked = false, 900);
   });
 
-
   window.addEventListener("resize", apply);
 
 });
-</script>
 
+// ─── FAKE SUBSCRIBE DEMO ─────────────────
+function subscribe(e) {
+  e.preventDefault();
 
-  // ─────────────────────────────────────────────
-  // FIX RESIZE
-  // ─────────────────────────────────────────────
-  window.addEventListener("resize", apply);
+  const mail = document.getElementById("mail").value;
+  const msg  = document.getElementById("msg");
 
-});
+  msg.innerText = "Thanks! " + mail + " subscribed.";
+
+  document.getElementById("mail").value = "";
+}
 </script>
 
 </body>
