@@ -81,14 +81,14 @@ canvas.parent("p5-container");
     }
 
     void main() {
-      float d = interference(vUV, 9.0, 0.02);
-            float d2 = interference(vUV+vec2(0.02,0.0), 9.0, 0.02);
+      float d = interference(vUV, 9.0, 0.05);
+            float d2 = interference(vUV+vec2(0.02,0.0), 9.0, 0.05);
 
       if (d > 0.5) discard;
       vec3 final = pulseOsc(vFreq, u_time + vTimeOffset, d);
       vec3 final2 = pulseOsc(vFreq, u_time + vTimeOffset, d2);
 
-      gl_FragColor = vec4(final, 1.0);
+      gl_FragColor = vec4(final+=final2, 1.0);
     }
   `;
 
