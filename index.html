@@ -2,212 +2,86 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Vallejo — Continuous Scroll</title>
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Vallejo</title>
+
 <style>
-  :root { --nav-h: 72px; }
-  html,body { height: 100%; margin: 0; }
-  body {
-    font-family: Helvetica, sans-serif;
-    overflow: hidden;
-  }
+body {
+  margin: 0;
+  font-family: Helvetica, sans-serif;
+  overflow: hidden;
+}
 
-  nav {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    display: flex;
-    gap: 20px;
-    padding: 20px;
-    background: rgba(255,255,255,0.95);
-    border-bottom: 1px solid #ddd;
-    z-index: 20;
-    height: var(--nav-h);
-    box-sizing: border-box;
-    align-items: center;
-  }
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  background: white;
+  border-bottom: 1px solid #ddd;
+  z-index: 10;
+}
 
-  nav a { text-decoration: none; color: black; font-weight: 600; }
-  nav a:active { opacity: 0.6; }
+nav a {
+  text-decoration: none;
+  color: black;
+}
 
-  /* scroller area (full viewport minus nav) */
-  .container {
-    position: absolute;
-    top: var(--nav-h);
-    left: 0;
-    right: 0;
-    bottom: 0;
-    overflow-y: auto;
-    scroll-snap-type: y mandatory;
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-  }
+.container {
+  height: 100vh;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+}
 
-  .section {
-    height: calc(100vh - var(--nav-h));
-    scroll-snap-align: start;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 48px;
-    user-select: none;
-  }
+.section {
+  height: 100vh;
+  scroll-snap-align: start;
 
-  /* color classes */
-  .s1 { background: #ff4d4d; }
-  .s2 { background: #4d7fff; }
-  .s3 { background: #4dff88; }
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-  /* small hint */
-  .note {
-    position: fixed;
-    right: 12px;
-    bottom: 12px;
-    font-size: 12px;
-    background: rgba(255,255,255,0.85);
-    padding: 6px 8px;
-    border-radius: 6px;
-    border: 1px solid #eee;
-  }
+  font-size: 40px;
+}
+
+#init { background: #ff4d4d; }
+#who  { background: #4d7fff; }
+#art  { background: #4dff88; }
 </style>
 </head>
+
 <body>
 
 <nav>
-  <a href="#s1">INIT</a>
-  <a href="#s2">WHO</a>
-  <a href="#s3">ART</a>
+  <a href="#init">INIT</a>
+  <a href="#who">WHO</a>
+  <a href="#art">ART</a>
 </nav>
 
-<div class="container" id="scroller" tabindex="0">
+<div class="container" id="scroller">
 
-  <!-- CLONES BEFORE -->
-  <section class="section s1">1</section>
-  <section class="section s2">2</section>
-  <section class="section s3">3</section>
-
-  <!-- MIDDLE (real) - these have the IDs used by nav links -->
-  <section class="section s1" id="s1">1</section>
-  <section class="section s2" id="s2">2</section>
-  <section class="section s3" id="s3">3</section>
-
-  <!-- CLONES AFTER -->
-  <section class="section s1">1</section>
-  <section class="section s2">2</section>
-  <section class="section s3">3</section>
+  <section class="section" id="init">INIT</section>
+  <section class="section" id="who">WHO</section>
+  <section class="section" id="art">ART</section>
 
 </div>
 
-<div class="note">Use trackpad / wheel — continuous loop</div>
-
 <script>
-(function () {
-  const scroller = document.getElementById('scroller');
-  const sections = scroller.querySelectorAll('.section');
-  const total = sections.length;          // should be 9 (3 + 3 + 3)
-  const originals = 3;                    // number of unique sections (1,2,3)
-  const beforeCount = originals;          // how many are before the middle
-  const middleStartIndex = beforeCount;   // index where "real" block starts
+const scroller = document.getElementById("scroller");
 
-  let rafId = null;
-  let lastKnownScroll = 0;
-  let ticking = false;
+scroller.addEventListener("wheel", (e) => {
+  const h = window.innerHeight;
+  const maxScroll = h * 2;   // position of section 3
 
-  function height() {
-    // viewport minus nav height (matches CSS)
-    return window.innerHeight - parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-h'));
+  // if we are at section 3 and user scrolls DOWN → block it
+  if (scroller.scrollTop >= maxScroll && e.deltaY > 0) {
+    e.preventDefault();
+    return false;
   }
-
-  function setInitialPosition() {
-    // place inside the middle block (start of the "real" block)
-    const h = height();
-    // scrollTop corresponds to number of pixels from container top
-    // middleStartIndex * h positions us at the start of the middle block
-    scroller.scrollTop = Math.round(middleStartIndex * h + 1);
-  }
-
-  // Throttled scroll handler using rAF
-  function onScroll() {
-    lastKnownScroll = scroller.scrollTop;
-    if (!ticking) {
-      rafId = requestAnimationFrame(processScroll);
-      ticking = true;
-    }
-  }
-
-  function processScroll() {
-    ticking = false;
-    const h = height();
-    const y = lastKnownScroll;
-    // round to nearest section index
-    const idx = Math.round(y / h);
-
-    // if we've scrolled into the "after" cloned block (index >= middleStartIndex + originals)
-    if (idx >= middleStartIndex + originals) {
-      // jump back one middle length (n * h)
-      // use auto behaviour so the jump is instant and doesn't animate
-      scroller.style.scrollBehavior = 'auto';
-      scroller.scrollTop = (idx - originals) * h + 1;
-      // restore smooth after a tick
-      setTimeout(()=> scroller.style.scrollBehavior = 'smooth', 40);
-      return;
-    }
-
-    // if we've scrolled into the "before" cloned block (index < middleStartIndex)
-    if (idx < middleStartIndex) {
-      scroller.style.scrollBehavior = 'auto';
-      scroller.scrollTop = (idx + originals) * h + 1;
-      setTimeout(()=> scroller.style.scrollBehavior = 'smooth', 40);
-      return;
-    }
-    // otherwise we're inside the middle block — nothing to do
-  }
-
-  // keep same logical section on resize
-  function onResize() {
-    // figure current logical index inside middle block (0..originals-1)
-    const hOld = height();
-    const idxAbs = Math.round(scroller.scrollTop / hOld);
-    // map absolute index to logical (mod originals)
-    const logical = ((idxAbs - middleStartIndex) % originals + originals) % originals;
-    // recalc and center in middle block at same logical index
-    const hNew = height();
-    scroller.style.scrollBehavior = 'auto';
-    scroller.scrollTop = (middleStartIndex + logical) * hNew + 1;
-    setTimeout(()=> scroller.style.scrollBehavior = 'smooth', 40);
-  }
-
-  // nav link handling: jump to middle-block anchor to avoid jumping to clones
-  document.querySelectorAll('nav a').forEach(a => {
-    a.addEventListener('click', (ev) => {
-      ev.preventDefault();
-      const targetId = a.getAttribute('href').slice(1); // e.g. "s2"
-      // find index of the target inside the middle block
-      const targetEl = document.getElementById(targetId);
-      if (!targetEl) return;
-      const all = Array.from(scroller.querySelectorAll('.section'));
-      const midIndex = all.indexOf(targetEl); // should be middleStartIndex + logical
-      const h = height();
-      scroller.style.scrollBehavior = 'smooth';
-      scroller.scrollTop = midIndex * h + 1;
-    });
-  });
-
-  // init
-  window.addEventListener('load', () => {
-    setInitialPosition();
-    // small timeout to ensure layout settled on some browsers
-    setTimeout(() => setInitialPosition(), 20);
-  });
-
-  scroller.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', () => {
-    // debounce resize a little
-    clearTimeout(window._vvResize);
-    window._vvResize = setTimeout(onResize, 80);
-  });
-})();
+}, { passive: false });
 </script>
 
 </body>
