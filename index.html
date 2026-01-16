@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Vallejo</title>
+<title>JPV</title>
 
 <style>
 body {
@@ -33,7 +33,6 @@ nav a {
   height: 100vh;
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
-  scroll-behavior: smooth;
 }
 
 .section {
@@ -47,63 +46,70 @@ nav a {
   font-size: 40px;
 }
 
-#init { background: #ff4d4d; }
-#who  { background: #4d7fff; }
-#art  { background: #4dff88; }
+.s1 { background: #ff4d4d; }
+.s2 { background: #4d7fff; }
+.s3 { background: #4dff88; }
 </style>
 </head>
 
 <body>
 
 <nav>
-  <a href="#init">INIT</a>
-  <a href="#who">WHO</a>
-  <a href="#art">ART</a>
+  <a href="#s1">INIT</a>
+  <a href="#s2">WHO</a>
+  <a href="#s3">ART</a>
 </nav>
 
 <div class="container" id="scroller">
 
-  <section class="section" id="init">
-    INIT
-  </section>
+  <!-- BLOQUE REAL -->
+  <section class="section s1">1</section>
+  <section class="section s2">2</section>
+  <section class="section s3">3</section>
 
-  <section class="section" id="who">
-    WHO
-  </section>
-
-  <section class="section" id="art">
-    ART
-  </section>
+  <!-- BLOQUE DUPLICADO -->
+  <section class="section s1">1</section>
+  <section class="section s2">2</section>
+  <section class="section s3">3</section>
 
 </div>
 
 <script>
 const scroller = document.getElementById("scroller");
+const sections = document.querySelectorAll(".section");
+const total = sections.length;
+const half = total / 2;
 
-let looping = false;
+let locked = false;
+
+// arrancar en el primer bloque real
+scroller.scrollTop = 1;
 
 scroller.addEventListener("scroll", () => {
-  if (looping) return;
+  if (locked) return;
 
   const h = window.innerHeight;
-  const max = scroller.scrollHeight;
+  const y = scroller.scrollTop;
 
-  // ---- LOOP AL FINAL ----
-  if (scroller.scrollTop + h >= max - 2) {
-    looping = true;
-    scroller.scrollTop = 1;
-    setTimeout(() => {
-      looping = false;
-    }, 60);
+  const index = Math.round(y / h);
+
+  // Si entró al bloque duplicado (4,5,6)
+  if (index >= half) {
+    locked = true;
+
+    // volver a la sección equivalente del primer bloque
+    scroller.scrollTop = (index - half) * h + 1;
+
+    setTimeout(() => locked = false, 40);
   }
 
-  // ---- LOOP AL INICIO ----
-  if (scroller.scrollTop <= 1) {
-    looping = true;
-    scroller.scrollTop = max - h - 2;
-    setTimeout(() => {
-      looping = false;
-    }, 60);
+  // Si sube por arriba del inicio
+  if (index < 0) {
+    locked = true;
+
+    scroller.scrollTop = (half - 1) * h + 1;
+
+    setTimeout(() => locked = false, 40);
   }
 });
 </script>
