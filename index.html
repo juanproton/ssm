@@ -2,56 +2,76 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>JPV</title>
-
+<title>Vallejo — Continuous Scroll</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <style>
-body {
-  margin: 0;
-  font-family: Helvetica, sans-serif;
-  overflow: hidden;
-}
+  :root { --nav-h: 72px; }
+  html,body { height: 100%; margin: 0; }
+  body {
+    font-family: Helvetica, sans-serif;
+    overflow: hidden;
+  }
 
-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  display: flex;
-  gap: 20px;
-  padding: 20px;
-  background: white;
-  border-bottom: 1px solid #ddd;
-  z-index: 10;
-}
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    background: rgba(255,255,255,0.95);
+    border-bottom: 1px solid #ddd;
+    z-index: 20;
+    height: var(--nav-h);
+    box-sizing: border-box;
+    align-items: center;
+  }
 
-nav a {
-  text-decoration: none;
-  color: black;
-}
+  nav a { text-decoration: none; color: black; font-weight: 600; }
+  nav a:active { opacity: 0.6; }
 
-.container {
-  height: 100vh;
-  overflow-y: scroll;
-  scroll-snap-type: y mandatory;
-}
+  /* scroller area (full viewport minus nav) */
+  .container {
+    position: absolute;
+    top: var(--nav-h);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
 
-.section {
-  height: 100vh;
-  scroll-snap-align: start;
+  .section {
+    height: calc(100vh - var(--nav-h));
+    scroll-snap-align: start;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    user-select: none;
+  }
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* color classes */
+  .s1 { background: #ff4d4d; }
+  .s2 { background: #4d7fff; }
+  .s3 { background: #4dff88; }
 
-  font-size: 40px;
-}
-
-.s1 { background: #ff4d4d; }
-.s2 { background: #4d7fff; }
-.s3 { background: #4dff88; }
+  /* small hint */
+  .note {
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    font-size: 12px;
+    background: rgba(255,255,255,0.85);
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #eee;
+  }
 </style>
 </head>
-
 <body>
 
 <nav>
@@ -60,58 +80,134 @@ nav a {
   <a href="#s3">ART</a>
 </nav>
 
-<div class="container" id="scroller">
+<div class="container" id="scroller" tabindex="0">
 
-  <!-- BLOQUE REAL -->
+  <!-- CLONES BEFORE -->
   <section class="section s1">1</section>
   <section class="section s2">2</section>
   <section class="section s3">3</section>
 
-  <!-- BLOQUE DUPLICADO -->
+  <!-- MIDDLE (real) - these have the IDs used by nav links -->
+  <section class="section s1" id="s1">1</section>
+  <section class="section s2" id="s2">2</section>
+  <section class="section s3" id="s3">3</section>
+
+  <!-- CLONES AFTER -->
   <section class="section s1">1</section>
   <section class="section s2">2</section>
   <section class="section s3">3</section>
 
 </div>
 
+<div class="note">Use trackpad / wheel — continuous loop</div>
+
 <script>
-const scroller = document.getElementById("scroller");
-const sections = document.querySelectorAll(".section");
-const total = sections.length;
-const half = total / 2;
+(function () {
+  const scroller = document.getElementById('scroller');
+  const sections = scroller.querySelectorAll('.section');
+  const total = sections.length;          // should be 9 (3 + 3 + 3)
+  const originals = 3;                    // number of unique sections (1,2,3)
+  const beforeCount = originals;          // how many are before the middle
+  const middleStartIndex = beforeCount;   // index where "real" block starts
 
-let locked = false;
+  let rafId = null;
+  let lastKnownScroll = 0;
+  let ticking = false;
 
-// arrancar en el primer bloque real
-scroller.scrollTop = 1;
-
-scroller.addEventListener("scroll", () => {
-  if (locked) return;
-
-  const h = window.innerHeight;
-  const y = scroller.scrollTop;
-
-  const index = Math.round(y / h);
-
-  // Si entró al bloque duplicado (4,5,6)
-  if (index >= half) {
-    locked = true;
-
-    // volver a la sección equivalente del primer bloque
-    scroller.scrollTop = (index - half) * h + 1;
-
-    setTimeout(() => locked = false, 40);
+  function height() {
+    // viewport minus nav height (matches CSS)
+    return window.innerHeight - parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-h'));
   }
 
-  // Si sube por arriba del inicio
-  if (index < 0) {
-    locked = true;
-
-    scroller.scrollTop = (half - 1) * h + 1;
-
-    setTimeout(() => locked = false, 40);
+  function setInitialPosition() {
+    // place inside the middle block (start of the "real" block)
+    const h = height();
+    // scrollTop corresponds to number of pixels from container top
+    // middleStartIndex * h positions us at the start of the middle block
+    scroller.scrollTop = Math.round(middleStartIndex * h + 1);
   }
-});
+
+  // Throttled scroll handler using rAF
+  function onScroll() {
+    lastKnownScroll = scroller.scrollTop;
+    if (!ticking) {
+      rafId = requestAnimationFrame(processScroll);
+      ticking = true;
+    }
+  }
+
+  function processScroll() {
+    ticking = false;
+    const h = height();
+    const y = lastKnownScroll;
+    // round to nearest section index
+    const idx = Math.round(y / h);
+
+    // if we've scrolled into the "after" cloned block (index >= middleStartIndex + originals)
+    if (idx >= middleStartIndex + originals) {
+      // jump back one middle length (n * h)
+      // use auto behaviour so the jump is instant and doesn't animate
+      scroller.style.scrollBehavior = 'auto';
+      scroller.scrollTop = (idx - originals) * h + 1;
+      // restore smooth after a tick
+      setTimeout(()=> scroller.style.scrollBehavior = 'smooth', 40);
+      return;
+    }
+
+    // if we've scrolled into the "before" cloned block (index < middleStartIndex)
+    if (idx < middleStartIndex) {
+      scroller.style.scrollBehavior = 'auto';
+      scroller.scrollTop = (idx + originals) * h + 1;
+      setTimeout(()=> scroller.style.scrollBehavior = 'smooth', 40);
+      return;
+    }
+    // otherwise we're inside the middle block — nothing to do
+  }
+
+  // keep same logical section on resize
+  function onResize() {
+    // figure current logical index inside middle block (0..originals-1)
+    const hOld = height();
+    const idxAbs = Math.round(scroller.scrollTop / hOld);
+    // map absolute index to logical (mod originals)
+    const logical = ((idxAbs - middleStartIndex) % originals + originals) % originals;
+    // recalc and center in middle block at same logical index
+    const hNew = height();
+    scroller.style.scrollBehavior = 'auto';
+    scroller.scrollTop = (middleStartIndex + logical) * hNew + 1;
+    setTimeout(()=> scroller.style.scrollBehavior = 'smooth', 40);
+  }
+
+  // nav link handling: jump to middle-block anchor to avoid jumping to clones
+  document.querySelectorAll('nav a').forEach(a => {
+    a.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      const targetId = a.getAttribute('href').slice(1); // e.g. "s2"
+      // find index of the target inside the middle block
+      const targetEl = document.getElementById(targetId);
+      if (!targetEl) return;
+      const all = Array.from(scroller.querySelectorAll('.section'));
+      const midIndex = all.indexOf(targetEl); // should be middleStartIndex + logical
+      const h = height();
+      scroller.style.scrollBehavior = 'smooth';
+      scroller.scrollTop = midIndex * h + 1;
+    });
+  });
+
+  // init
+  window.addEventListener('load', () => {
+    setInitialPosition();
+    // small timeout to ensure layout settled on some browsers
+    setTimeout(() => setInitialPosition(), 20);
+  });
+
+  scroller.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', () => {
+    // debounce resize a little
+    clearTimeout(window._vvResize);
+    window._vvResize = setTimeout(onResize, 80);
+  });
+})();
 </script>
 
 </body>
