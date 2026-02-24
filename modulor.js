@@ -23,7 +23,7 @@ let character; // The person object
 let pane;
 let paneParams = { 
   wallBlocks: 6,      
-  orientation: 'FLOOR', 
+  orientation: 'WALL', 
   rotation: 45,
   elevation: 0,
   moveX: 0,
