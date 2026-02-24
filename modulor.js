@@ -122,6 +122,8 @@ function draw() {
       syncMoveSliders();
     }
   }
+
+  
 }
 
 // --- CHARACTER CLASS ---
@@ -457,6 +459,32 @@ function setupGui() {
   
   pane.addSeparator();
   pane.addInput(paneParams, 'rotation', { min: 0, max: 360, step: 1, label: 'Camera Orbit' });
+
+
+
+  const helpFolder = pane.addFolder({
+    title: 'HELP & CONTROLS',
+    expanded: true, // Keep it open so users see it
+  });
+
+  // We use "Monitor" fields or simple blade buttons to show text in Tweakpane
+  helpFolder.addSeparator();
+  const helpText = [
+    { label: 'Create', value: 'SHIFT + Drag' },
+    { label: 'Select', value: 'Mouse Click' },
+    { label: 'Walk', value: 'Key [V]' },
+    { label: 'Grid', value: 'Key [H]' },
+    { label: 'Top View', value: 'Key [C]' },
+    { label: 'Delete', value: 'DEL / BKSP' },
+    { label: 'Clear All', value: 'Key [N]' }
+  ];
+
+  helpText.forEach(item => {
+    helpFolder.addMonitor(item, 'value', {
+      label: item.label,
+      multiline: false,
+    });
+  });
 }
 
 function generateGridData() {
