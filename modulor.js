@@ -30,7 +30,7 @@ let paneParams = {
   firstPerson: false,
   orientation: 'WALL', 
   wallBlocks: 10,      
-  wallDepth: 1,      
+  wallDepth: 0,      
   elevation: 0,
   showSecondary: true, 
   moveX: 0,
