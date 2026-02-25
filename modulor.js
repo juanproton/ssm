@@ -35,8 +35,8 @@ let paneParams = {
   showSecondary: true, 
   moveX: 0,
   moveZ: 0,
-  boundaryX: 14, 
-  boundaryZ: 10,
+  boundaryX: 15, 
+  boundaryZ: 11,
   rotation: 45
 }; 
 
