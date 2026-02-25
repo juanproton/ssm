@@ -121,14 +121,21 @@ function draw() {
 
 // --- STATE MANAGEMENT & URL SHARING ---
 
+// --- STATE MANAGEMENT & URL SHARING ---
+
 function saveStateToUrl() {
   const state = {
     p: planes.map(p => ({
-      // Save exact coordinates to avoid clamping beyond grid limits
-      px1: Math.round(p.p1.x * 1000) / 1000,
-      pz1: Math.round(p.p1.z * 1000) / 1000,
-      px2: Math.round(p.p2.x * 1000) / 1000,
-      pz2: Math.round(p.p2.z * 1000) / 1000,
+      // Keep original index keys so it doesn't break old parsing
+      x1: findGridIndex(p.p1.x),
+      z1: findGridIndex(p.p1.z),
+      x2: findGridIndex(p.p2.x),
+      z2: findGridIndex(p.p2.z),
+      // Add explicit exact coordinates to prevent clamping out-of-bounds planes
+      px1: p.p1.x, 
+      pz1: p.p1.z,
+      px2: p.p2.x,
+      pz2: p.p2.z,
       t: p.type === 'WALL' ? 1 : 0,
       h: p.numBlocks,
       d: p.depthBlocks,
@@ -156,53 +163,14 @@ function loadStateFromUrl() {
     paneParams.showSecondary = decoded.s.sc;
 
     planes = decoded.p.map(pData => {
-      // Use exact coordinates if available, fallback to old index logic for backward compatibility
-      let vx1 = pData.px1 !== undefined ? pData.px1 : getGridDist(pData.x1);
-      let vz1 = pData.pz1 !== undefined ? pData.pz1 : getGridDist(pData.z1);
-      let vx2 = pData.px2 !== undefined ? pData.px2 : getGridDist(pData.x2);
-      let vz2 = pData.pz2 !== undefined ? pData.pz2 : getGridDist(pData.z2);
+      // If the exact coordinate exists (new links), use it. Otherwise fallback to the index (old links).
+      let vx1 = ('px1' in pData) ? pData.px1 : getGridDist(pData.x1);
+      let vz1 = ('pz1' in pData) ? pData.pz1 : getGridDist(pData.z1);
+      let vx2 = ('px2' in pData) ? pData.px2 : getGridDist(pData.x2);
+      let vz2 = ('pz2' in pData) ? pData.pz2 : getGridDist(pData.z2);
       
       let v1 = createVector(vx1, 0, vz1);
       let v2 = createVector(vx2, 0, vz2);
-      
-      // Temporary override for constructor logic
-      let originalType = paneParams.orientation;
-      let originalH = paneParams.wallBlocks;
-      let originalD = paneParams.wallDepth;
-      let originalE = paneParams.elevation;
-      
-      paneParams.orientation = pData.t === 1 ? 'WALL' : 'FLOOR';
-      paneParams.wallBlocks = pData.h;
-      paneParams.wallDepth = pData.d;
-      paneParams.elevation = pData.e;
-      
-      let p = new GridPlane(v1, v2);
-      
-      // Restore params
-      paneParams.orientation = originalType;
-      paneParams.wallBlocks = originalH;
-      paneParams.wallDepth = originalD;
-      paneParams.elevation = originalE;
-      
-      return p;
-    });
-    pane.refresh();
-  } catch (e) { console.error("Load failed", e); }
-}
-
-function loadStateFromUrl() {
-  const hash = window.location.hash.substring(1);
-  if (!hash) return;
-  try {
-    const decoded = JSON.parse(atob(hash));
-    paneParams.boundaryX = decoded.s.bx;
-    paneParams.boundaryZ = decoded.s.bz;
-    paneParams.rotation = decoded.s.rt;
-    paneParams.showSecondary = decoded.s.sc;
-
-    planes = decoded.p.map(pData => {
-      let v1 = createVector(getGridDist(pData.x1), 0, getGridDist(pData.z1));
-      let v2 = createVector(getGridDist(pData.x2), 0, getGridDist(pData.z2));
       
       // Temporary override for constructor logic
       let originalType = paneParams.orientation;
