@@ -5,7 +5,7 @@ const SUBDIVISIONS = 36;
 const PATTERN_1 = [0.86, 0.54]; // Primary Modulor
 const PATTERN_2 = [0.20];       // Secondary Grid (20cm)
 
-const CONST_THICKNESS = 0.1 * PIXELS_PER_CM; 
+const CONST_THICKNESS = 0.05 * PIXELS_PER_CM; 
 
 let camDist = 800; 
 let mergedCoords = []; 
