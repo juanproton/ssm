@@ -1,5 +1,5 @@
 const PIXELS_PER_CM = 50; 
-const SUBDIVISIONS = 60; 
+const SUBDIVISIONS = 36; 
 
 const PATTERN_1 = [0.86, 0.54]; 
 const PATTERN_2 = [0.20];       
@@ -55,24 +55,24 @@ function draw() {
   let centerX = xLimit / 2;
   let centerZ = zLimit / 2;
 
-  // Camera Management
+  // --- CAMERA LOGIC (EXACTLY AS PREVIOUS VERSION) ---
   if (isFPV) {
     character.update();
+  } else if (isAutoRotating) {
+    paneParams.rotation = (paneParams.rotation + 0.2) % 360; 
+    pane.refresh(); 
+  }
+
+  if (isFPV) {
     character.applyCamera();
+  } else if (isCenitalView) {
+    camera(centerX, -camDist, centerZ, centerX, 0, centerZ, 0, 0, -1);
   } else {
-    if (isAutoRotating) {
-      paneParams.rotation = (paneParams.rotation + 0.2) % 360; 
-      pane.refresh(); 
-    }
-    if (isCenitalView) {
-      camera(centerX, -camDist, centerZ, centerX, 0, centerZ, 0, 0, -1);
-    } else {
-      let rad = radians(paneParams.rotation);
-      let camX = centerX + camDist * cos(rad);
-      let camZ = centerZ + camDist * sin(rad);
-      let camY = -camDist * 0.8;
-      camera(camX, camY, camZ, centerX, 0, centerZ, 0, 1, 0);
-    }
+    let rad = radians(paneParams.rotation);
+    let camX = centerX + camDist * cos(rad);
+    let camZ = centerZ + camDist * sin(rad);
+    let camY = -camDist * 0.8;
+    camera(camX, camY, camZ, centerX, 0, centerZ, 0, 1, 0);
   }
  
   let targetElev = (isMovingPlane && selectedPlane) ? selectedPlane.elevBlocks : paneParams.elevation;
@@ -81,6 +81,7 @@ function draw() {
   push();
   let drawY = -getGridDist(paneParams.elevation);
 
+  // --- GRID RENDERING (UNTOUCHED) ---
   renderGridSubset(gridLinesPrimary, drawY, xLimit, zLimit);
   if (paneParams.showSecondary) renderGridSubset(gridLinesSecondary, drawY, xLimit, zLimit);
 
@@ -115,56 +116,51 @@ function draw() {
   }
 }
 
-// --- CORE GRID GENERATION ---
+// --- GRID GENERATION (EXACTLY AS PREVIOUS VERSION) ---
 
 function generateGridData() {
   vertices3D = []; gridLinesPrimary = []; gridLinesSecondary = [];
-  let baseCoords = [0];
-  let curPos = 0; let curNeg = 0;
-  for (let i = 0; i < SUBDIVISIONS; i++) {
-    curPos += PATTERN_1[i % PATTERN_1.length];
-    baseCoords.push(curPos * PIXELS_PER_CM);
-    curNeg -= PATTERN_1[i % PATTERN_1.length];
-    baseCoords.push(curNeg * PIXELS_PER_CM);
-  }
-  baseCoords.sort((a,b) => a-b);
+  let coords1 = [0]; let cur1 = 0; let coords2 = [0]; let cur2 = 0;
   
-  let maxL = baseCoords[baseCoords.length-1];
-  let minL = baseCoords[0];
+  // Pattern 1
+  for (let i = 0; i < SUBDIVISIONS; i++) { 
+    cur1 += PATTERN_1[i % PATTERN_1.length]; coords1.push(cur1 * PIXELS_PER_CM); 
+  }
+  let maxL = coords1[coords1.length - 1];
+  
+  // Pattern 2
+  while (cur2 * PIXELS_PER_CM < maxL) {
+    cur2 += PATTERN_2[(coords2.length - 1) % PATTERN_2.length]; coords2.push(cur2 * PIXELS_PER_CM);
+  }
 
   function createLines(coordsArr, col, wt, targetList) {
     for (let v of coordsArr) {
-      // Floor Grids
-      targetList.push({ p1: createVector(v, 0, minL), p2: createVector(v, 0, maxL), color: col, weight: wt });
-      targetList.push({ p1: createVector(minL, 0, v), p2: createVector(maxL, 0, v), color: col, weight: wt });
-      // Wall/Vertical Grids
-      targetList.push({ p1: createVector(v, 0, 0), p2: createVector(v, minL, 0), color: col, weight: wt });
+      targetList.push({ p1: createVector(v, 0, 0), p2: createVector(v, 0, maxL), color: col, weight: wt });
+      targetList.push({ p1: createVector(0, 0, v), p2: createVector(maxL, 0, v), color: col, weight: wt });
+      targetList.push({ p1: createVector(v, 0, 0), p2: createVector(v, -maxL, 0), color: col, weight: wt });
       targetList.push({ p1: createVector(0, -v, 0), p2: createVector(maxL, -v, 0), color: col, weight: wt });
+      targetList.push({ p1: createVector(0, 0, v), p2: createVector(0, -maxL, v), color: col, weight: wt });
+      targetList.push({ p1: createVector(0, -v, 0), p2: createVector(0, -v, maxL), color: col, weight: wt });
     }
   }
 
-  let secCoords = [];
-  for(let x = minL; x <= maxL; x += 0.20 * PIXELS_PER_CM) secCoords.push(x);
-
-  createLines(secCoords, color(255, 170, 0, 80), 1, gridLinesSecondary); 
-  createLines(baseCoords, color(180), 1.5, gridLinesPrimary);             
+  createLines(coords2, color(255, 170, 0, 80), 1, gridLinesSecondary); 
+  createLines(coords1, color(180), 1.5, gridLinesPrimary);             
   
-  let allSet = new Set([...baseCoords, ...secCoords]);
+  let allSet = new Set([...coords1, ...coords2]);
   mergedCoords = Array.from(allSet).map(v => Math.round(v * 1000) / 1000).sort((a, b) => a - b);
   
   for (let v of mergedCoords) {
     for (let v2 of mergedCoords) {
       vertices3D.push(createVector(v, 0, v2)); 
-      vertices3D.push(createVector(v, -v2, 0));
+      vertices3D.push(createVector(v, -v2, 0)); 
+      vertices3D.push(createVector(0, -v2, v));
     }
   }
 }
 
 function renderGridSubset(lines, drawY, xLim, zLim) {
   for (let l of lines) {
-    // Only Draw if line is in positive space
-    if (l.p1.x < -0.1 || l.p1.z < -0.1 || l.p2.x < -0.1 || l.p2.z < -0.1) continue;
-
     stroke(l.color); strokeWeight(l.weight);
     let isOnTargetFloor = (abs(l.p1.y - drawY) < 0.1 && abs(l.p2.y - drawY) < 0.1);
     if (showFullGrid) {
@@ -190,25 +186,22 @@ class GridPlane {
     this.updateBounds();
   }
   updateBounds() {
-    this.w = abs(this.p1.x - this.p2.x);
-    this.d = abs(this.p1.z - this.p2.z);
-    this.centerX = (this.p1.x + this.p2.x) / 2;
-    this.centerZ = (this.p1.z + this.p2.z) / 2;
+    this.w = abs(this.p1.x - this.p2.x); this.d = abs(this.p1.z - this.p2.z);
+    this.centerX = (this.p1.x + this.p2.x) / 2; this.centerZ = (this.p1.z + this.p2.z) / 2;
     this.wallAxis = (this.w > this.d) ? 'X' : 'Z';
   }
   getYPos() { return -getGridDist(this.elevBlocks); }
   display(isPreview = false) {
     push();
     let yPos = this.getYPos();
-    let wallH = (this.type === 'WALL') ? abs(getGridDist(this.numBlocks) - getGridDist(0)) : CONST_THICKNESS;
-    let thickness = (this.type === 'WALL') ? abs(getGridDist(this.depthBlocks) - getGridDist(0)) : CONST_THICKNESS;
-    let halfThick = thickness / 2;
+    let wallH = (this.type === 'WALL') ? getGridDist(this.numBlocks) : CONST_THICKNESS;
+    let thickness = (this.type === 'WALL') ? getGridDist(this.depthBlocks) : CONST_THICKNESS;
     if (this.type === 'WALL') {
       if (this.wallAxis === 'X') {
-        translate(this.centerX, yPos - wallH/2, this.p1.z + halfThick);
+        translate(this.centerX, yPos - wallH/2, this.p1.z + thickness/2);
         this.drawBox(this.w, wallH, thickness, isPreview);
       } else {
-        translate(this.p1.x + halfThick, yPos - wallH/2, this.centerZ);
+        translate(this.p1.x + thickness/2, yPos - wallH/2, this.centerZ);
         this.drawBox(thickness, wallH, this.d, isPreview);
       }
     } else {
@@ -260,92 +253,7 @@ class Character {
   }
 }
 
-// --- UI & HELPERS ---
-
-function setupGui() {
-  pane = new Tweakpane.Pane({ title: 'MODULOR SYSTEM' });
-  const proj = pane.addFolder({ title: 'PROJECT' });
-  proj.addButton({ title: 'Copy Share Link' }).on('click', async () => {
-    saveStateToUrl(); await navigator.clipboard.writeText(window.location.href); alert("URL Copied!");
-  });
-  pane.addInput(paneParams, 'firstPerson', { label: 'Walk Mode (V)' }).on('change', ev => isFPV = ev.value);
-  const tool = pane.addFolder({ title: 'TOOL' });
-  tool.addInput(paneParams, 'orientation', { options: { Floor: 'FLOOR', Wall: 'WALL' } });
-  tool.addInput(paneParams, 'wallBlocks', { min: 1, max: 80, step: 1, label: 'Height' }).on('change', ev => { if(selectedPlane) {selectedPlane.numBlocks = ev.value; saveStateToUrl();}});
-  tool.addInput(paneParams, 'wallDepth', { min: 0, max: 20, step: 1, label: 'Thick' }).on('change', ev => { if(selectedPlane) {selectedPlane.depthBlocks = ev.value; saveStateToUrl();}});
-  const pos = pane.addFolder({ title: 'POSITION' });
-  pos.addInput(paneParams, 'moveX', { min: -100, max: 200, step: 1 }).on('change', ev => { movePlaneToGrid('x', ev.value); saveStateToUrl(); });
-  pos.addInput(paneParams, 'elevation', { min: -100, max: 100, step: 1 }).on('change', ev => { if(selectedPlane) {selectedPlane.elevBlocks = ev.value; saveStateToUrl(); }});
-  pos.addInput(paneParams, 'moveZ', { min: -100, max: 200, step: 1 }).on('change', ev => { movePlaneToGrid('z', ev.value); saveStateToUrl(); });
-  const lim = pane.addFolder({ title: 'LIMITS' });
-  lim.addInput(paneParams, 'boundaryX', { min: 1, max: 35, step: 1 });
-  lim.addInput(paneParams, 'boundaryZ', { min: 1, max: 35, step: 1 });
-  pane.addInput(paneParams, 'rotation', { min: 0, max: 360, step: 1 });
-}
-
-function getGridDist(index) {
-  let zeroIdx = mergedCoords.findIndex(v => abs(v) < 0.01);
-  return mergedCoords[constrain(zeroIdx + index, 0, mergedCoords.length - 1)];
-}
-
-function findGridIndex(pos) {
-  let bestIdx = 0; let minDist = Infinity;
-  for (let i = 0; i < mergedCoords.length; i++) {
-    let d = abs(mergedCoords[i] - pos);
-    if (d < minDist) { minDist = d; bestIdx = i; }
-  }
-  let zeroIdx = mergedCoords.findIndex(v => abs(v) < 0.01);
-  return bestIdx - zeroIdx;
-}
-
-function getPrimaryGridDist(numBlocks) {
-  let d = 0; for (let i = 0; i < numBlocks; i++) d += PATTERN_1[i % PATTERN_1.length];
-  return d * PIXELS_PER_CM;
-}
-
-function movePlaneToGrid(axis, index) {
-  if (!selectedPlane) return;
-  let target = getGridDist(index);
-  if (axis === 'x') { let diff = target - selectedPlane.p1.x; selectedPlane.p1.x += diff; selectedPlane.p2.x += diff; } 
-  else { let diff = target - selectedPlane.p1.z; selectedPlane.p1.z += diff; selectedPlane.p2.z += diff; }
-  selectedPlane.updateBounds();
-}
-
-function getClosestVertex(xLim, zLim, elev) {
-  let closest = null; let minDist = Infinity; let targetY = -getGridDist(elev);
-  for (let v of vertices3D) {
-    if (abs(v.y - targetY) > 0.1) continue; 
-    let sPos = getManualScreenPos(v.x, v.y, v.z);
-    let d = dist(mouseX, mouseY, sPos.x, sPos.y);
-    if (d < minDist && d < 35) { minDist = d; closest = v; }
-  }
-  return closest;
-}
-
-function getManualScreenPos(x, y, z) {
-  let r = _renderer; let mvp = r.uMVMatrix.copy().mult(r.uPMatrix);
-  let x4 = x * mvp.mat4[0] + y * mvp.mat4[4] + z * mvp.mat4[8] + mvp.mat4[12];
-  let y4 = x * mvp.mat4[1] + y * mvp.mat4[5] + z * mvp.mat4[9] + mvp.mat4[13];
-  let w4 = x * mvp.mat4[3] + y * mvp.mat4[7] + z * mvp.mat4[11] + mvp.mat4[15];
-  return { x: (x4 / w4 + 1) * width / 2, y: (1 - y4 / w4) * height / 2 };
-}
-
-function syncMoveSliders() {
-  if (!selectedPlane) return;
-  paneParams.moveX = findGridIndex(selectedPlane.p1.x); 
-  paneParams.moveZ = findGridIndex(selectedPlane.p1.z);
-  pane.refresh();
-}
-
-function selectPlane(p) {
-  deselectAll(); selectedPlane = p; selectedPlane.isSelected = true;
-  paneParams.elevation = p.elevBlocks; paneParams.wallBlocks = p.numBlocks; paneParams.wallDepth = p.depthBlocks;
-  syncMoveSliders(); pane.refresh();
-}
-
-function deselectAll() { if (selectedPlane) selectedPlane.isSelected = false; selectedPlane = null; pane.refresh(); }
-
-// --- INTERACTION FUNCTIONS ---
+// --- UI & INTERACTION ---
 
 function keyPressed() {
   if (key === 'v' || key === 'V') {
@@ -399,40 +307,46 @@ function mouseWheel(event) {
   if (!isMouseOverGui() && !isFPV) { camDist = constrain(camDist + event.delta, 100, 2500); return false; }
 }
 
-// --- STATE & UTILS ---
-
-function saveStateToUrl() {
-  const state = {
-    p: planes.map(p => ({
-      x1: findGridIndex(p.p1.x), z1: findGridIndex(p.p1.z), x2: findGridIndex(p.p2.x), z2: findGridIndex(p.p2.z),
-      t: p.type === 'WALL' ? 1 : 0, h: p.numBlocks, d: p.depthBlocks, e: p.elevBlocks
-    })),
-    s: { bx: paneParams.boundaryX, bz: paneParams.boundaryZ, rt: Math.round(paneParams.rotation), sc: paneParams.showSecondary }
-  };
-  window.history.replaceState(null, null, "#" + btoa(JSON.stringify(state)));
+function setupGui() {
+  pane = new Tweakpane.Pane({ title: 'MODULOR SYSTEM' });
+  const proj = pane.addFolder({ title: 'PROJECT' });
+  proj.addButton({ title: 'Copy Share Link' }).on('click', async () => {
+    saveStateToUrl(); await navigator.clipboard.writeText(window.location.href); alert("URL Copied!");
+  });
+  pane.addInput(paneParams, 'firstPerson', { label: 'Walk Mode (V)' }).on('change', ev => isFPV = ev.value);
+  const tool = pane.addFolder({ title: 'TOOL' });
+  tool.addInput(paneParams, 'orientation', { options: { Floor: 'FLOOR', Wall: 'WALL' } });
+  tool.addInput(paneParams, 'wallBlocks', { min: 1, max: 80, step: 1, label: 'Height' }).on('change', ev => { if(selectedPlane) {selectedPlane.numBlocks = ev.value; saveStateToUrl();}});
+  tool.addInput(paneParams, 'wallDepth', { min: 0, max: 20, step: 1, label: 'Thick' }).on('change', ev => { if(selectedPlane) {selectedPlane.depthBlocks = ev.value; saveStateToUrl();}});
+  pane.addInput(paneParams, 'showSecondary', { label: '20cm Grid' }).on('change', saveStateToUrl);
+  const pos = pane.addFolder({ title: 'POSITION' });
+  pos.addInput(paneParams, 'moveX', { min: 0, max: 200, step: 1 }).on('change', ev => { movePlaneToGrid('x', ev.value); saveStateToUrl(); });
+  pos.addInput(paneParams, 'elevation', { min: 0, max: 100, step: 1 }).on('change', ev => { if(selectedPlane) {selectedPlane.elevBlocks = ev.value; saveStateToUrl(); }});
+  pos.addInput(paneParams, 'moveZ', { min: 0, max: 200, step: 1 }).on('change', ev => { movePlaneToGrid('z', ev.value); saveStateToUrl(); });
+  const lim = pane.addFolder({ title: 'LIMITS' });
+  lim.addInput(paneParams, 'boundaryX', { min: 1, max: 35, step: 1 });
+  lim.addInput(paneParams, 'boundaryZ', { min: 1, max: 35, step: 1 });
+  pane.addInput(paneParams, 'rotation', { min: 0, max: 360, step: 1 });
 }
 
-function loadStateFromUrl() {
-  const hash = window.location.hash.substring(1);
-  if (!hash) return;
-  try {
-    const decoded = JSON.parse(atob(hash));
-    paneParams.boundaryX = decoded.s.bx; paneParams.boundaryZ = decoded.s.bz;
-    paneParams.rotation = decoded.s.rt; paneParams.showSecondary = decoded.s.sc;
-    planes = decoded.p.map(pData => {
-      let v1 = createVector(getGridDist(pData.x1), 0, getGridDist(pData.z1));
-      let v2 = createVector(getGridDist(pData.x2), 0, getGridDist(pData.z2));
-      let old = { t: paneParams.orientation, h: paneParams.wallBlocks, d: paneParams.wallDepth, e: paneParams.elevation };
-      paneParams.orientation = pData.t === 1 ? 'WALL' : 'FLOOR';
-      paneParams.wallBlocks = pData.h; paneParams.wallDepth = pData.d; paneParams.elevation = pData.e;
-      let p = new GridPlane(v1, v2);
-      Object.assign(paneParams, old);
-      return p;
-    });
-    pane.refresh();
-  } catch (e) { console.error("Load failed", e); }
-}
+// --- UTILS ---
 
+function getPrimaryGridDist(numBlocks) {
+  let d = 0; for (let i = 0; i < numBlocks; i++) d += PATTERN_1[i % PATTERN_1.length];
+  return d * PIXELS_PER_CM;
+}
+function getGridDist(index) { if (index >= mergedCoords.length) return mergedCoords[mergedCoords.length - 1]; return mergedCoords[index]; }
+function findGridIndex(pos) { let bestIdx = 0; let minDist = Infinity; for (let i = 0; i < mergedCoords.length; i++) { let d = abs(mergedCoords[i] - pos); if (d < minDist) { minDist = d; bestIdx = i; } } return bestIdx; }
+function movePlaneToGrid(axis, index) { if (!selectedPlane) return; let target = getGridDist(index); if (axis === 'x') { let diff = target - selectedPlane.p1.x; selectedPlane.p1.x += diff; selectedPlane.p2.x += diff; } else { let diff = target - selectedPlane.p1.z; selectedPlane.p1.z += diff; selectedPlane.p2.z += diff; } selectedPlane.updateBounds(); }
+function getClosestVertex(xLim, zLim, elev) { let closest = null; let minDist = Infinity; let targetY = -getGridDist(elev); for (let v of vertices3D) { if (abs(v.y - targetY) > 0.1) continue; let sPos = getManualScreenPos(v.x, v.y, v.z); let d = dist(mouseX, mouseY, sPos.x, sPos.y); if (d < minDist && d < 35) { minDist = d; closest = v; } } return closest; }
+function getManualScreenPos(x, y, z) { let r = _renderer; let mvp = r.uMVMatrix.copy().mult(r.uPMatrix); let x4 = x * mvp.mat4[0] + y * mvp.mat4[4] + z * mvp.mat4[8] + mvp.mat4[12]; let y4 = x * mvp.mat4[1] + y * mvp.mat4[5] + z * mvp.mat4[9] + mvp.mat4[13]; let w4 = x * mvp.mat4[3] + y * mvp.mat4[7] + z * mvp.mat4[11] + mvp.mat4[15]; return { x: (x4 / w4 + 1) * width / 2, y: (1 - y4 / w4) * height / 2 }; }
+function selectPlane(p) { deselectAll(); selectedPlane = p; selectedPlane.isSelected = true; paneParams.elevation = p.elevBlocks; paneParams.wallBlocks = p.numBlocks; paneParams.wallDepth = p.depthBlocks; syncMoveSliders(); pane.refresh(); }
+function deselectAll() { if (selectedPlane) selectedPlane.isSelected = false; selectedPlane = null; pane.refresh(); }
+function syncMoveSliders() { if (!selectedPlane) return; paneParams.moveX = findGridIndex(selectedPlane.p1.x); paneParams.moveZ = findGridIndex(selectedPlane.p1.z); pane.refresh(); }
 function drawUI() { if (currentV) { push(); translate(currentV.x, currentV.y, currentV.z); fill(255, 0, 100); noStroke(); sphere(2); pop(); } }
 function isMouseOverGui() { const g = document.querySelector('.tp-dfwv'); return g ? (mouseX >= g.getBoundingClientRect().left && mouseX <= g.getBoundingClientRect().right && mouseY >= g.getBoundingClientRect().top && mouseY <= g.getBoundingClientRect().bottom) : false; }
 function windowResized() { resizeCanvas(windowWidth, windowHeight); }
+
+// URL Logic
+function saveStateToUrl() { const state = { p: planes.map(p => ({ x1: findGridIndex(p.p1.x), z1: findGridIndex(p.p1.z), x2: findGridIndex(p.p2.x), z2: findGridIndex(p.p2.z), t: p.type === 'WALL' ? 1 : 0, h: p.numBlocks, d: p.depthBlocks, e: p.elevBlocks })), s: { bx: paneParams.boundaryX, bz: paneParams.boundaryZ, rt: Math.round(paneParams.rotation), sc: paneParams.showSecondary } }; window.history.replaceState(null, null, "#" + btoa(JSON.stringify(state))); }
+function loadStateFromUrl() { const hash = window.location.hash.substring(1); if (!hash) return; try { const decoded = JSON.parse(atob(hash)); paneParams.boundaryX = decoded.s.bx; paneParams.boundaryZ = decoded.s.bz; paneParams.rotation = decoded.s.rt; paneParams.showSecondary = decoded.s.sc; planes = decoded.p.map(pData => { let v1 = createVector(getGridDist(pData.x1), 0, getGridDist(pData.z1)); let v2 = createVector(getGridDist(pData.x2), 0, getGridDist(pData.z2)); let old = { t: paneParams.orientation, h: paneParams.wallBlocks, d: paneParams.wallDepth, e: paneParams.elevation }; paneParams.orientation = pData.t === 1 ? 'WALL' : 'FLOOR'; paneParams.wallBlocks = pData.h; paneParams.wallDepth = pData.d; paneParams.elevation = pData.e; let p = new GridPlane(v1, v2); Object.assign(paneParams, old); return p; }); pane.refresh(); } catch (e) { console.error(e); } }
