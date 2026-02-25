@@ -1,5 +1,5 @@
 const PIXELS_PER_CM = 50; 
-const SUBDIVISIONS = 80; // Increased range
+const SUBDIVISIONS = 100; // Increased to allow more space
 
 // The two independent grid patterns
 const PATTERN_1 = [0.86, 0.54]; // Primary Modulor
@@ -86,6 +86,7 @@ function draw() {
   renderGridSubset(gridLinesPrimary, drawY, xLimit, zLimit);
   if (paneParams.showSecondary) renderGridSubset(gridLinesSecondary, drawY, xLimit, zLimit);
 
+  // Planes are rendered here - they will show outside the red mark
   for (let p of planes) p.display();
   if (!isFPV) character.display();
 
@@ -94,7 +95,7 @@ function draw() {
     previewPlane.display(true); 
   }
 
-  // Red Boundary - Purely visual now, no longer cuts
+  // Red Boundary
   stroke(255, 0, 0); strokeWeight(3); noFill();
   beginShape();
   vertex(0, 0, 0); vertex(xLimit, 0, 0);
@@ -117,7 +118,7 @@ function draw() {
   }
 }
 
-// --- STATE MANAGEMENT ---
+// --- STATE MANAGEMENT & URL SHARING ---
 
 function saveStateToUrl() {
   const state = {
@@ -179,15 +180,19 @@ function loadStateFromUrl() {
   } catch (e) { console.error("Load failed", e); }
 }
 
-// --- GRID & GEOMETRY (FIXED FOR NO CLIPPING) ---
+// --- GRID & GEOMETRY ---
 
 function renderGridSubset(lines, drawY, xLim, zLim) {
   for (let l of lines) {
     stroke(l.color); strokeWeight(l.weight);
     let isOnTargetFloor = (abs(l.p1.y - drawY) < 0.1 && abs(l.p2.y - drawY) < 0.1);
-    if (showFullGrid || isOnTargetFloor) {
-      // Logic removed: no more constrain() to allow lines to go past the red mark
+    if (showFullGrid) {
       line(l.p1.x, l.p1.y, l.p1.z, l.p2.x, l.p2.y, l.p2.z);
+    } else if (isOnTargetFloor) {
+      // KEEPING CONSTRAIN FOR LINES (Visually clips grid to the red mark)
+      let x1 = constrain(l.p1.x, 0, xLim); let x2 = constrain(l.p2.x, 0, xLim);
+      let z1 = constrain(l.p1.z, 0, zLim); let z2 = constrain(l.p2.z, 0, zLim);
+      if (dist(x1, 0, z1, x2, 0, z2) > 0.5) line(x1, drawY, z1, x2, drawY, z2);
     }
   }
 }
@@ -195,33 +200,31 @@ function renderGridSubset(lines, drawY, xLim, zLim) {
 function generateGridData() {
   vertices3D = []; gridLinesPrimary = []; gridLinesSecondary = [];
   
-  // Expanded logic to create negative and positive coordinates
-  let posCoords = [0]; let cur = 0;
+  // Expanded to support negative space and large positive space
+  let baseCoords = [0];
+  let curPos = 0;
+  let curNeg = 0;
   for (let i = 0; i < SUBDIVISIONS; i++) {
-    cur += PATTERN_1[i % PATTERN_1.length];
-    posCoords.push(cur * PIXELS_PER_CM);
+    curPos += PATTERN_1[i % PATTERN_1.length];
+    baseCoords.push(curPos * PIXELS_PER_CM);
+    curNeg -= PATTERN_1[i % PATTERN_1.length];
+    baseCoords.push(curNeg * PIXELS_PER_CM);
   }
+  baseCoords.sort((a,b) => a-b);
   
-  let negCoords = []; cur = 0;
-  for (let i = 0; i < 50; i++) {
-    cur -= PATTERN_1[i % PATTERN_1.length];
-    negCoords.push(cur * PIXELS_PER_CM);
-  }
-
-  let baseCoords = [...negCoords, ...posCoords].sort((a,b)=>a-b);
-  let maxL = posCoords[posCoords.length-1];
-  let minL = negCoords[negCoords.length-1];
+  let maxL = baseCoords[baseCoords.length-1];
+  let minL = baseCoords[0];
 
   function createLines(coordsArr, col, wt, targetList) {
     for (let v of coordsArr) {
       targetList.push({ p1: createVector(v, 0, minL), p2: createVector(v, 0, maxL), color: col, weight: wt });
       targetList.push({ p1: createVector(minL, 0, v), p2: createVector(maxL, 0, v), color: col, weight: wt });
-      targetList.push({ p1: createVector(v, 0, minL), p2: createVector(v, -maxL, minL), color: col, weight: wt });
-      targetList.push({ p1: createVector(minL, -v, minL), p2: createVector(maxL, -v, minL), color: col, weight: wt });
+      targetList.push({ p1: createVector(v, 0, 0), p2: createVector(v, -maxL, 0), color: col, weight: wt });
+      targetList.push({ p1: createVector(0, -v, 0), p2: createVector(maxL, -v, 0), color: col, weight: wt });
     }
   }
 
-  // Generate Secondary (20cm) based on range
+  // Generate Secondary range
   let secCoords = [];
   for(let x = minL; x <= maxL; x += 0.20 * PIXELS_PER_CM) secCoords.push(x);
 
@@ -233,9 +236,8 @@ function generateGridData() {
   
   for (let v of mergedCoords) {
     for (let v2 of mergedCoords) {
-       // Snap points cloud
-       vertices3D.push(createVector(v, 0, v2)); 
-       vertices3D.push(createVector(v, -v2, 0));
+      vertices3D.push(createVector(v, 0, v2)); 
+      vertices3D.push(createVector(v, -v2, 0));
     }
   }
 }
@@ -246,10 +248,9 @@ function getPrimaryGridDist(numBlocks) {
 }
 
 function getGridDist(index) {
-  // Normalize index so 0 is origin in the middle of our expanded array
+  // Find where 0 is in our expanded mergedCoords
   let zeroIdx = mergedCoords.findIndex(v => v === 0);
-  let finalIdx = zeroIdx + index;
-  finalIdx = constrain(finalIdx, 0, mergedCoords.length - 1);
+  let finalIdx = constrain(zeroIdx + index, 0, mergedCoords.length - 1);
   return mergedCoords[finalIdx];
 }
 
@@ -285,7 +286,6 @@ class GridPlane {
   display(isPreview = false) {
     push();
     let yPos = this.getYPos();
-    // Calculate actual height based on index from 0
     let wallH = (this.type === 'WALL') ? abs(getGridDist(this.numBlocks) - getGridDist(0)) : CONST_THICKNESS;
     let thickness = (this.type === 'WALL') ? abs(getGridDist(this.depthBlocks) - getGridDist(0)) : CONST_THICKNESS;
     let halfThick = thickness / 2;
@@ -423,10 +423,10 @@ function setupGui() {
   pane.addInput(paneParams, 'showSecondary', { label: '20cm Grid' }).on('change', saveStateToUrl);
 
   const posFolder = pane.addFolder({ title: 'POSITION' });
-  // Updated limits to allow negative movement
-  posFolder.addInput(paneParams, 'moveX', { min: -50, max: 200, step: 1, label: 'X Index' }).on('change', (ev) => { movePlaneToGrid('x', ev.value); saveStateToUrl(); });
-  posFolder.addInput(paneParams, 'elevation', { min: -50, max: 100, step: 1, label: 'Elevation' }).on('change', (ev) => { if (selectedPlane) { selectedPlane.elevBlocks = ev.value; saveStateToUrl(); } });
-  posFolder.addInput(paneParams, 'moveZ', { min: -50, max: 200, step: 1, label: 'Z Index' }).on('change', (ev) => { movePlaneToGrid('z', ev.value); saveStateToUrl(); });
+  // Updated min to -100 to allow moving planes outside the red box
+  posFolder.addInput(paneParams, 'moveX', { min: -100, max: 200, step: 1, label: 'X Index' }).on('change', (ev) => { movePlaneToGrid('x', ev.value); saveStateToUrl(); });
+  posFolder.addInput(paneParams, 'elevation', { min: -100, max: 100, step: 1, label: 'Elevation' }).on('change', (ev) => { if (selectedPlane) { selectedPlane.elevBlocks = ev.value; saveStateToUrl(); } });
+  posFolder.addInput(paneParams, 'moveZ', { min: -100, max: 200, step: 1, label: 'Z Index' }).on('change', (ev) => { movePlaneToGrid('z', ev.value); saveStateToUrl(); });
 
   const boundFolder = pane.addFolder({ title: 'LIMITS' });
   boundFolder.addInput(paneParams, 'boundaryX', { min: 1, max: 35, step: 1, label: 'Limit X' }).on('change', saveStateToUrl);
