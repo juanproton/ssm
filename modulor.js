@@ -1,5 +1,5 @@
 const PIXELS_PER_CM = 50; 
-const SUBDIVISIONS = 100; // Increased to allow more space
+const SUBDIVISIONS = 36; // Increased to allow more space
 
 // The two independent grid patterns
 const PATTERN_1 = [0.86, 0.54]; // Primary Modulor
