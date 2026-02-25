@@ -1,5 +1,5 @@
 const PIXELS_PER_CM = 50; 
-const SUBDIVISIONS = 36; 
+const SUBDIVISIONS = 80; // Increased range
 
 // The two independent grid patterns
 const PATTERN_1 = [0.86, 0.54]; // Primary Modulor
@@ -45,6 +45,8 @@ function setup() {
   generateGridData(); 
   character = new Character();
   setupGui();
+  
+  // Load state from URL Hash if present
   loadStateFromUrl();
 }
 
@@ -81,9 +83,8 @@ function draw() {
   push();
   let drawY = -getGridDist(paneParams.elevation);
 
-  // Render grid without visual clipping
-  renderGridSubset(gridLinesPrimary, drawY);
-  if (paneParams.showSecondary) renderGridSubset(gridLinesSecondary, drawY);
+  renderGridSubset(gridLinesPrimary, drawY, xLimit, zLimit);
+  if (paneParams.showSecondary) renderGridSubset(gridLinesSecondary, drawY, xLimit, zLimit);
 
   for (let p of planes) p.display();
   if (!isFPV) character.display();
@@ -93,8 +94,8 @@ function draw() {
     previewPlane.display(true); 
   }
 
-  // Red Boundary (Now purely a visual reference, does not cut anything)
-  stroke(255, 0, 0, 150); strokeWeight(3); noFill();
+  // Red Boundary - Purely visual now, no longer cuts
+  stroke(255, 0, 0); strokeWeight(3); noFill();
   beginShape();
   vertex(0, 0, 0); vertex(xLimit, 0, 0);
   vertex(xLimit, 0, zLimit); vertex(0, 0, zLimit);
@@ -116,7 +117,7 @@ function draw() {
   }
 }
 
-// --- PERSISTENT STATE MANAGEMENT ---
+// --- STATE MANAGEMENT ---
 
 function saveStateToUrl() {
   const state = {
@@ -178,13 +179,14 @@ function loadStateFromUrl() {
   } catch (e) { console.error("Load failed", e); }
 }
 
-// --- INFINITE GRID & GEOMETRY ---
+// --- GRID & GEOMETRY (FIXED FOR NO CLIPPING) ---
 
-function renderGridSubset(lines, drawY) {
+function renderGridSubset(lines, drawY, xLim, zLim) {
   for (let l of lines) {
     stroke(l.color); strokeWeight(l.weight);
     let isOnTargetFloor = (abs(l.p1.y - drawY) < 0.1 && abs(l.p2.y - drawY) < 0.1);
     if (showFullGrid || isOnTargetFloor) {
+      // Logic removed: no more constrain() to allow lines to go past the red mark
       line(l.p1.x, l.p1.y, l.p1.z, l.p2.x, l.p2.y, l.p2.z);
     }
   }
@@ -192,46 +194,48 @@ function renderGridSubset(lines, drawY) {
 
 function generateGridData() {
   vertices3D = []; gridLinesPrimary = []; gridLinesSecondary = [];
-  let coords1 = [0]; let cur1 = 0; let coords2 = [0]; let cur2 = 0;
   
-  // Generate positive and mirror for negative
-  for (let i = 0; i < SUBDIVISIONS * 2; i++) { 
-    cur1 += PATTERN_1[i % PATTERN_1.length]; 
-    coords1.push(cur1 * PIXELS_PER_CM); 
-    coords1.push(-cur1 * PIXELS_PER_CM); 
+  // Expanded logic to create negative and positive coordinates
+  let posCoords = [0]; let cur = 0;
+  for (let i = 0; i < SUBDIVISIONS; i++) {
+    cur += PATTERN_1[i % PATTERN_1.length];
+    posCoords.push(cur * PIXELS_PER_CM);
   }
-  let maxL = getPrimaryGridDist(SUBDIVISIONS);
-  while (cur2 * PIXELS_PER_CM < maxL) {
-    cur2 += PATTERN_2[(coords2.length - 1) % PATTERN_2.length]; 
-    coords2.push(cur2 * PIXELS_PER_CM);
-    coords2.push(-cur2 * PIXELS_PER_CM);
+  
+  let negCoords = []; cur = 0;
+  for (let i = 0; i < 50; i++) {
+    cur -= PATTERN_1[i % PATTERN_1.length];
+    negCoords.push(cur * PIXELS_PER_CM);
   }
 
+  let baseCoords = [...negCoords, ...posCoords].sort((a,b)=>a-b);
+  let maxL = posCoords[posCoords.length-1];
+  let minL = negCoords[negCoords.length-1];
+
   function createLines(coordsArr, col, wt, targetList) {
-    let sorted = [...new Set(coordsArr)].sort((a,b)=>a-b);
-    let minG = sorted[0];
-    let maxG = sorted[sorted.length-1];
-    for (let v of sorted) {
-      targetList.push({ p1: createVector(v, 0, minG), p2: createVector(v, 0, maxG), color: col, weight: wt });
-      targetList.push({ p1: createVector(minG, 0, v), p2: createVector(maxG, 0, v), color: col, weight: wt });
-      targetList.push({ p1: createVector(v, 0, 0), p2: createVector(v, -maxG, 0), color: col, weight: wt });
-      targetList.push({ p1: createVector(minG, -v, 0), p2: createVector(maxG, -v, 0), color: col, weight: wt });
+    for (let v of coordsArr) {
+      targetList.push({ p1: createVector(v, 0, minL), p2: createVector(v, 0, maxL), color: col, weight: wt });
+      targetList.push({ p1: createVector(minL, 0, v), p2: createVector(maxL, 0, v), color: col, weight: wt });
+      targetList.push({ p1: createVector(v, 0, minL), p2: createVector(v, -maxL, minL), color: col, weight: wt });
+      targetList.push({ p1: createVector(minL, -v, minL), p2: createVector(maxL, -v, minL), color: col, weight: wt });
     }
   }
+
+  // Generate Secondary (20cm) based on range
+  let secCoords = [];
+  for(let x = minL; x <= maxL; x += 0.20 * PIXELS_PER_CM) secCoords.push(x);
+
+  createLines(secCoords, color(255, 170, 0, 80), 1, gridLinesSecondary); 
+  createLines(baseCoords, color(180), 1.5, gridLinesPrimary);             
   
-  createLines(coords2, color(255, 170, 0, 80), 1, gridLinesSecondary); 
-  createLines(coords1, color(180), 1.5, gridLinesPrimary);             
-  
-  let allSet = new Set([...coords1, ...coords2]);
+  let allSet = new Set([...baseCoords, ...secCoords]);
   mergedCoords = Array.from(allSet).map(v => Math.round(v * 1000) / 1000).sort((a, b) => a - b);
   
-  // Vertex cloud for snapping
   for (let v of mergedCoords) {
     for (let v2 of mergedCoords) {
-      if (abs(v) < maxL && abs(v2) < maxL) {
-        vertices3D.push(createVector(v, 0, v2)); 
-        vertices3D.push(createVector(v, -v2, 0));
-      }
+       // Snap points cloud
+       vertices3D.push(createVector(v, 0, v2)); 
+       vertices3D.push(createVector(v, -v2, 0));
     }
   }
 }
@@ -242,10 +246,11 @@ function getPrimaryGridDist(numBlocks) {
 }
 
 function getGridDist(index) {
-  let idx = index + 100; // Offset to handle negative slider indices
-  if (idx < 0) return mergedCoords[0];
-  if (idx >= mergedCoords.length) return mergedCoords[mergedCoords.length - 1];
-  return mergedCoords[idx];
+  // Normalize index so 0 is origin in the middle of our expanded array
+  let zeroIdx = mergedCoords.findIndex(v => v === 0);
+  let finalIdx = zeroIdx + index;
+  finalIdx = constrain(finalIdx, 0, mergedCoords.length - 1);
+  return mergedCoords[finalIdx];
 }
 
 function findGridIndex(pos) {
@@ -254,7 +259,8 @@ function findGridIndex(pos) {
     let d = abs(mergedCoords[i] - pos);
     if (d < minDist) { minDist = d; bestIdx = i; }
   }
-  return bestIdx - 100; // Return offset index for slider
+  let zeroIdx = mergedCoords.findIndex(v => v === 0);
+  return bestIdx - zeroIdx;
 }
 
 class GridPlane {
@@ -279,6 +285,7 @@ class GridPlane {
   display(isPreview = false) {
     push();
     let yPos = this.getYPos();
+    // Calculate actual height based on index from 0
     let wallH = (this.type === 'WALL') ? abs(getGridDist(this.numBlocks) - getGridDist(0)) : CONST_THICKNESS;
     let thickness = (this.type === 'WALL') ? abs(getGridDist(this.depthBlocks) - getGridDist(0)) : CONST_THICKNESS;
     let halfThick = thickness / 2;
@@ -416,10 +423,10 @@ function setupGui() {
   pane.addInput(paneParams, 'showSecondary', { label: '20cm Grid' }).on('change', saveStateToUrl);
 
   const posFolder = pane.addFolder({ title: 'POSITION' });
-  // Adjusted limits to allow negative movement
-  posFolder.addInput(paneParams, 'moveX', { min: -100, max: 200, step: 1, label: 'X Index' }).on('change', (ev) => { movePlaneToGrid('x', ev.value); saveStateToUrl(); });
+  // Updated limits to allow negative movement
+  posFolder.addInput(paneParams, 'moveX', { min: -50, max: 200, step: 1, label: 'X Index' }).on('change', (ev) => { movePlaneToGrid('x', ev.value); saveStateToUrl(); });
   posFolder.addInput(paneParams, 'elevation', { min: -50, max: 100, step: 1, label: 'Elevation' }).on('change', (ev) => { if (selectedPlane) { selectedPlane.elevBlocks = ev.value; saveStateToUrl(); } });
-  posFolder.addInput(paneParams, 'moveZ', { min: -100, max: 200, step: 1, label: 'Z Index' }).on('change', (ev) => { movePlaneToGrid('z', ev.value); saveStateToUrl(); });
+  posFolder.addInput(paneParams, 'moveZ', { min: -50, max: 200, step: 1, label: 'Z Index' }).on('change', (ev) => { movePlaneToGrid('z', ev.value); saveStateToUrl(); });
 
   const boundFolder = pane.addFolder({ title: 'LIMITS' });
   boundFolder.addInput(paneParams, 'boundaryX', { min: 1, max: 35, step: 1, label: 'Limit X' }).on('change', saveStateToUrl);
