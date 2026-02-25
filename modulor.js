@@ -1,9 +1,10 @@
 const PIXELS_PER_CM = 50; 
 const SUBDIVISIONS = 36; 
 
-// Grid Patterns
+// The two independent grid patterns
 const PATTERN_1 = [0.86, 0.54]; // Primary Modulor
 const PATTERN_2 = [0.20];       // Secondary Grid (20cm)
+
 const CONST_THICKNESS = 0.05 * PIXELS_PER_CM; 
 
 let camDist = 800; 
@@ -29,12 +30,12 @@ let paneParams = {
   firstPerson: false,
   orientation: 'WALL', 
   wallBlocks: 10,      
-  wallDepth: 0,        // START BY STANDARD THICKNESS (Index 2 = 20cm)
+  wallDepth: 0,      
   elevation: 0,
   showSecondary: true, 
   moveX: 0,
   moveZ: 0,
-  boundaryX: 15, 
+  boundaryX: 15,  
   boundaryZ: 11,
   rotation: 45
 }; 
@@ -44,7 +45,7 @@ function setup() {
   generateGridData(); 
   character = new Character();
   setupGui();
-  loadStateFromUrl(); // Now restores camera pos and grid visibility too
+  loadStateFromUrl();
 }
 
 function draw() {
@@ -62,7 +63,6 @@ function draw() {
     pane.refresh(); 
   }
 
-  // Camera Logic
   if (isFPV) {
     character.applyCamera();
   } else if (isCenitalView) {
@@ -81,10 +81,10 @@ function draw() {
   push();
   let drawY = -getGridDist(paneParams.elevation);
 
-  renderGridSubset(gridLinesPrimary, drawY, xLimit, zLimit);
-  if (paneParams.showSecondary) renderGridSubset(gridLinesSecondary, drawY, xLimit, zLimit);
+  // Render grid without visual clipping
+  renderGridSubset(gridLinesPrimary, drawY);
+  if (paneParams.showSecondary) renderGridSubset(gridLinesSecondary, drawY);
 
-  // Planes are rendered independently of limits to ensure they are never "cut"
   for (let p of planes) p.display();
   if (!isFPV) character.display();
 
@@ -93,8 +93,8 @@ function draw() {
     previewPlane.display(true); 
   }
 
-  // Red Boundary (Visual only)
-  stroke(255, 0, 0); strokeWeight(3); noFill();
+  // Red Boundary (Now purely a visual reference, does not cut anything)
+  stroke(255, 0, 0, 150); strokeWeight(3); noFill();
   beginShape();
   vertex(0, 0, 0); vertex(xLimit, 0, 0);
   vertex(xLimit, 0, zLimit); vertex(0, 0, zLimit);
@@ -116,23 +116,25 @@ function draw() {
   }
 }
 
-// --- UPDATED STATE MANAGEMENT (Captures Everything) ---
+// --- PERSISTENT STATE MANAGEMENT ---
 
 function saveStateToUrl() {
   const state = {
     p: planes.map(p => ({
-      x1: findGridIndex(p.p1.x), z1: findGridIndex(p.p1.z),
-      x2: findGridIndex(p.p2.x), z2: findGridIndex(p.p2.z),
-      t: p.type === 'WALL' ? 1 : 0, h: p.numBlocks, d: p.depthBlocks, e: p.elevBlocks
+      x1: findGridIndex(p.p1.x),
+      z1: findGridIndex(p.p1.z),
+      x2: findGridIndex(p.p2.x),
+      z2: findGridIndex(p.p2.z),
+      t: p.type === 'WALL' ? 1 : 0,
+      h: p.numBlocks,
+      d: p.depthBlocks,
+      e: p.elevBlocks
     })),
     s: {
-      bx: paneParams.boundaryX, bz: paneParams.boundaryZ,
-      rt: Math.round(paneParams.rotation), sc: paneParams.showSecondary,
-      gr: showFullGrid, fp: isFPV
-    },
-    c: { // Camera Position & Rotation
-      x: character.pos.x, z: character.pos.z,
-      yw: character.yaw, pt: character.pitch
+      bx: paneParams.boundaryX,
+      bz: paneParams.boundaryZ,
+      rt: Math.round(paneParams.rotation),
+      sc: paneParams.showSecondary
     }
   };
   const encoded = btoa(JSON.stringify(state));
@@ -144,48 +146,116 @@ function loadStateFromUrl() {
   if (!hash) return;
   try {
     const decoded = JSON.parse(atob(hash));
-    // Restore System Settings
     paneParams.boundaryX = decoded.s.bx;
     paneParams.boundaryZ = decoded.s.bz;
     paneParams.rotation = decoded.s.rt;
     paneParams.showSecondary = decoded.s.sc;
-    showFullGrid = (decoded.s.gr !== undefined) ? decoded.s.gr : true;
-    isFPV = (decoded.s.fp !== undefined) ? decoded.s.fp : false;
-    paneParams.firstPerson = isFPV;
 
-    // Restore Camera
-    if (decoded.c) {
-      character.pos.set(decoded.c.x, 0, decoded.c.z);
-      character.yaw = decoded.c.yw;
-      character.pitch = decoded.c.pt;
-    }
-
-    // Restore Planes
-    planes = decoded.p.map(pd => {
-      let v1 = createVector(getGridDist(pd.x1), 0, getGridDist(pd.z1));
-      let v2 = createVector(getGridDist(pd.x2), 0, getGridDist(pd.z2));
-      let oldType = paneParams.orientation;
-      let oldH = paneParams.wallBlocks;
-      let oldD = paneParams.wallDepth;
-      let oldE = paneParams.elevation;
-
-      paneParams.orientation = pd.t === 1 ? 'WALL' : 'FLOOR';
-      paneParams.wallBlocks = pd.h;
-      paneParams.wallDepth = pd.d;
-      paneParams.elevation = pd.e;
+    planes = decoded.p.map(pData => {
+      let v1 = createVector(getGridDist(pData.x1), 0, getGridDist(pData.z1));
+      let v2 = createVector(getGridDist(pData.x2), 0, getGridDist(pData.z2));
+      
+      let originalType = paneParams.orientation;
+      let originalH = paneParams.wallBlocks;
+      let originalD = paneParams.wallDepth;
+      let originalE = paneParams.elevation;
+      
+      paneParams.orientation = pData.t === 1 ? 'WALL' : 'FLOOR';
+      paneParams.wallBlocks = pData.h;
+      paneParams.wallDepth = pData.d;
+      paneParams.elevation = pData.e;
+      
       let p = new GridPlane(v1, v2);
-
-      paneParams.orientation = oldType;
-      paneParams.wallBlocks = oldH;
-      paneParams.wallDepth = oldD;
-      paneParams.elevation = oldE;
+      
+      paneParams.orientation = originalType;
+      paneParams.wallBlocks = originalH;
+      paneParams.wallDepth = originalD;
+      paneParams.elevation = originalE;
+      
       return p;
     });
     pane.refresh();
-  } catch (e) { console.warn("Load failed or hash empty."); }
+  } catch (e) { console.error("Load failed", e); }
 }
 
-// --- COLLISION & IMPROVED SELECTION ---
+// --- INFINITE GRID & GEOMETRY ---
+
+function renderGridSubset(lines, drawY) {
+  for (let l of lines) {
+    stroke(l.color); strokeWeight(l.weight);
+    let isOnTargetFloor = (abs(l.p1.y - drawY) < 0.1 && abs(l.p2.y - drawY) < 0.1);
+    if (showFullGrid || isOnTargetFloor) {
+      line(l.p1.x, l.p1.y, l.p1.z, l.p2.x, l.p2.y, l.p2.z);
+    }
+  }
+}
+
+function generateGridData() {
+  vertices3D = []; gridLinesPrimary = []; gridLinesSecondary = [];
+  let coords1 = [0]; let cur1 = 0; let coords2 = [0]; let cur2 = 0;
+  
+  // Generate positive and mirror for negative
+  for (let i = 0; i < SUBDIVISIONS * 2; i++) { 
+    cur1 += PATTERN_1[i % PATTERN_1.length]; 
+    coords1.push(cur1 * PIXELS_PER_CM); 
+    coords1.push(-cur1 * PIXELS_PER_CM); 
+  }
+  let maxL = getPrimaryGridDist(SUBDIVISIONS);
+  while (cur2 * PIXELS_PER_CM < maxL) {
+    cur2 += PATTERN_2[(coords2.length - 1) % PATTERN_2.length]; 
+    coords2.push(cur2 * PIXELS_PER_CM);
+    coords2.push(-cur2 * PIXELS_PER_CM);
+  }
+
+  function createLines(coordsArr, col, wt, targetList) {
+    let sorted = [...new Set(coordsArr)].sort((a,b)=>a-b);
+    let minG = sorted[0];
+    let maxG = sorted[sorted.length-1];
+    for (let v of sorted) {
+      targetList.push({ p1: createVector(v, 0, minG), p2: createVector(v, 0, maxG), color: col, weight: wt });
+      targetList.push({ p1: createVector(minG, 0, v), p2: createVector(maxG, 0, v), color: col, weight: wt });
+      targetList.push({ p1: createVector(v, 0, 0), p2: createVector(v, -maxG, 0), color: col, weight: wt });
+      targetList.push({ p1: createVector(minG, -v, 0), p2: createVector(maxG, -v, 0), color: col, weight: wt });
+    }
+  }
+  
+  createLines(coords2, color(255, 170, 0, 80), 1, gridLinesSecondary); 
+  createLines(coords1, color(180), 1.5, gridLinesPrimary);             
+  
+  let allSet = new Set([...coords1, ...coords2]);
+  mergedCoords = Array.from(allSet).map(v => Math.round(v * 1000) / 1000).sort((a, b) => a - b);
+  
+  // Vertex cloud for snapping
+  for (let v of mergedCoords) {
+    for (let v2 of mergedCoords) {
+      if (abs(v) < maxL && abs(v2) < maxL) {
+        vertices3D.push(createVector(v, 0, v2)); 
+        vertices3D.push(createVector(v, -v2, 0));
+      }
+    }
+  }
+}
+
+function getPrimaryGridDist(numBlocks) {
+  let d = 0; for (let i = 0; i < numBlocks; i++) d += PATTERN_1[i % PATTERN_1.length];
+  return d * PIXELS_PER_CM;
+}
+
+function getGridDist(index) {
+  let idx = index + 100; // Offset to handle negative slider indices
+  if (idx < 0) return mergedCoords[0];
+  if (idx >= mergedCoords.length) return mergedCoords[mergedCoords.length - 1];
+  return mergedCoords[idx];
+}
+
+function findGridIndex(pos) {
+  let bestIdx = 0; let minDist = Infinity;
+  for (let i = 0; i < mergedCoords.length; i++) {
+    let d = abs(mergedCoords[i] - pos);
+    if (d < minDist) { minDist = d; bestIdx = i; }
+  }
+  return bestIdx - 100; // Return offset index for slider
+}
 
 class GridPlane {
   constructor(v1, v2) {
@@ -204,33 +274,13 @@ class GridPlane {
     this.centerX = (this.p1.x + this.p2.x) / 2;
     this.centerZ = (this.p1.z + this.p2.z) / 2;
     this.wallAxis = (this.w > this.d) ? 'X' : 'Z';
-
-    // Physical AABB for Collision
-    let h = (this.type === 'WALL') ? getGridDist(this.numBlocks) : CONST_THICKNESS;
-    let t = (this.type === 'WALL') ? getGridDist(this.depthBlocks) : CONST_THICKNESS;
-    let yBase = this.getYPos();
-    
-    if (this.type === 'WALL') {
-      if (this.wallAxis === 'X') {
-        this.minX = min(this.p1.x, this.p2.x); this.maxX = max(this.p1.x, this.p2.x);
-        this.minZ = this.p1.z; this.maxZ = this.p1.z + t;
-      } else {
-        this.minX = this.p1.x; this.maxX = this.p1.x + t;
-        this.minZ = min(this.p1.z, this.p2.z); this.maxZ = max(this.p1.z, this.p2.z);
-      }
-      this.minY = yBase - h; this.maxY = yBase;
-    } else {
-      this.minX = min(this.p1.x, this.p2.x); this.maxX = max(this.p1.x, this.p2.x);
-      this.minZ = min(this.p1.z, this.p2.z); this.maxZ = max(this.p1.z, this.p2.z);
-      this.minY = yBase - CONST_THICKNESS; this.maxY = yBase;
-    }
   }
   getYPos() { return -getGridDist(this.elevBlocks); }
   display(isPreview = false) {
     push();
     let yPos = this.getYPos();
-    let wallH = (this.type === 'WALL') ? getGridDist(this.numBlocks) : CONST_THICKNESS;
-    let thickness = (this.type === 'WALL') ? getGridDist(this.depthBlocks) : CONST_THICKNESS;
+    let wallH = (this.type === 'WALL') ? abs(getGridDist(this.numBlocks) - getGridDist(0)) : CONST_THICKNESS;
+    let thickness = (this.type === 'WALL') ? abs(getGridDist(this.depthBlocks) - getGridDist(0)) : CONST_THICKNESS;
     let halfThick = thickness / 2;
     if (this.type === 'WALL') {
       if (this.wallAxis === 'X') {
@@ -256,7 +306,7 @@ class GridPlane {
   }
 }
 
-// --- SOLID CHARACTER ---
+// --- CAMERA & CONTROLS ---
 
 class Character {
   constructor() {
@@ -264,46 +314,20 @@ class Character {
     this.yaw = 0; this.pitch = 0; 
     this.fullHeight = 2.23 * PIXELS_PER_CM;
     this.eyeHeight = 1.80 * PIXELS_PER_CM;
-    this.radius = 15;
-    this.speed = 3.5; this.sensitivity = 0.005;
+    this.speed = 3; this.sensitivity = 0.005;
   }
   update() {
     if (mouseIsPressed && !isMouseOverGui()) {
       this.yaw += movedX * this.sensitivity;
       this.pitch += movedY * this.sensitivity;
       this.pitch = constrain(this.pitch, -HALF_PI + 0.01, HALF_PI - 0.01);
-      saveStateToUrl();
     }
     let f = createVector(sin(this.yaw), 0, cos(this.yaw));
     let r = createVector(sin(this.yaw + HALF_PI), 0, cos(this.yaw + HALF_PI));
-    let move = createVector(0,0,0);
-    if (keyIsDown(87)) move.add(f); 
-    if (keyIsDown(83)) move.sub(f); 
-    if (keyIsDown(65)) move.add(r);   
-    if (keyIsDown(68)) move.sub(r);
-
-    if (move.mag() > 0) {
-      move.normalize().mult(this.speed);
-      // X Movement + Collision
-      let nextX = createVector(this.pos.x + move.x, 0, this.pos.z);
-      if (!this.checkWallCollision(nextX)) this.pos.x = nextX.x;
-      // Z Movement + Collision
-      let nextZ = createVector(this.pos.x, 0, this.pos.z + move.z);
-      if (!this.checkWallCollision(nextZ)) this.pos.z = nextZ.z;
-      saveStateToUrl();
-    }
-  }
-  checkWallCollision(p) {
-    for (let plane of planes) {
-      let headY = -this.eyeHeight;
-      if (footY > plane.minY && headY < plane.maxY) { // Vertical Check
-        if (p.x + this.radius > plane.minX && p.x - this.radius < plane.maxX &&
-            p.z + this.radius > plane.minZ && p.z - this.radius < plane.maxZ) {
-          return true;
-        }
-      }
-    }
-    return false;
+    if (keyIsDown(87)) this.pos.add(p5.Vector.mult(f, this.speed)); 
+    if (keyIsDown(83)) this.pos.sub(p5.Vector.mult(f, this.speed)); 
+    if (keyIsDown(65)) this.pos.add(p5.Vector.mult(r, this.speed));   
+    if (keyIsDown(68)) this.pos.sub(p5.Vector.mult(r, this.speed));   
   }
   applyCamera() {
     let lookAt = createVector(this.pos.x + sin(this.yaw) * cos(this.pitch), -this.eyeHeight + sin(this.pitch), this.pos.z + cos(this.yaw) * cos(this.pitch));
@@ -311,20 +335,19 @@ class Character {
   }
   display() {
     push(); translate(this.pos.x, -this.fullHeight / 2, this.pos.z); rotateY(this.yaw);
-    fill(0, 100, 255, 200); stroke(0, 50, 150); box(this.radius*2, this.fullHeight, this.radius*2); pop();
+    fill(0, 100, 255, 200); stroke(0, 50, 150); box(15, this.fullHeight, 15); pop();
   }
 }
-let footY = 0; // Reference for collision floor level
-
-// --- UI & INTERACTION ---
 
 function keyPressed() {
   if (key === 'v' || key === 'V') {
     isFPV = !isFPV; paneParams.firstPerson = isFPV;
     if (isFPV) requestPointerLock(); else exitPointerLock();
-    saveStateToUrl(); pane.refresh();
+    pane.refresh();
   }
-  if (key === 'h' || key === 'H') { showFullGrid = !showFullGrid; saveStateToUrl(); }
+  if (key === 'j' || key === 'J') isAutoRotating = !isAutoRotating;
+  if (key === 'h' || key === 'H') showFullGrid = !showFullGrid;
+  if (key === 'n' || key === 'N') { if(confirm("Clear Project?")){ planes = []; selectedPlane = null; saveStateToUrl(); } }
   if ((keyCode === DELETE || keyCode === BACKSPACE) && selectedPlane) {
     planes.splice(planes.indexOf(selectedPlane), 1);
     selectedPlane = null; saveStateToUrl();
@@ -335,107 +358,114 @@ function keyPressed() {
 function mousePressed() {
   if (isMouseOverGui() || isFPV) return;
   if (!keyIsDown(SHIFT)) {
-    // Improved selection: Check 3 points on the plane "spine"
-    let clicked = null; let minDist = 45;
+    let clickedPlane = null; let minDist = Infinity;
     for (let p of planes) {
-      let pts = [{x: p.p1.x, z: p.p1.z}, {x: p.centerX, z: p.centerZ}, {x: p.p2.x, z: p.p2.z}];
-      for (let pt of pts) {
-        let sPos = getManualScreenPos(pt.x, p.getYPos(), pt.z);
-        let d = dist(mouseX, mouseY, sPos.x, sPos.y);
-        if (d < minDist) { minDist = d; clicked = p; }
-      }
+      let sPos = getManualScreenPos(p.centerX, p.getYPos(), p.centerZ);
+      let d = dist(mouseX, mouseY, sPos.x, sPos.y);
+      if (d < 50 && d < minDist) { minDist = d; clickedPlane = p; }
     }
-    if (clicked) {
-      if (selectedPlane === clicked && currentV) { isMovingPlane = true; startV = currentV.copy(); }
-      else { selectPlane(clicked); } return;
+    if (clickedPlane) {
+      if (selectedPlane === clickedPlane && currentV) { isMovingPlane = true; startV = currentV.copy(); }
+      else { selectPlane(clickedPlane); } return;
     } else { deselectAll(); }
   }
   if (keyIsDown(SHIFT) && currentV) { startV = currentV.copy(); isDragging = true; }
 }
 
+function mouseReleased() {
+  if (isDragging && startV && currentV) {
+    if (dist(startV.x, startV.y, startV.z, currentV.x, currentV.y, currentV.z) > 1) {
+      planes.push(new GridPlane(startV, currentV)); saveStateToUrl();
+    }
+  }
+  if (isMovingPlane) saveStateToUrl();
+  isDragging = false; isMovingPlane = false; startV = null; 
+}
+
+function mouseDragged() {
+  if (!isMouseOverGui() && !isDragging && !isMovingPlane && !isFPV) {
+    paneParams.rotation = (paneParams.rotation - movedX * 0.5) % 360; pane.refresh();
+  }
+}
+
+function mouseWheel(event) {
+  if (!isMouseOverGui() && !isFPV) { camDist = constrain(camDist + event.delta, 100, 2500); return false; }
+}
+
+// --- GUI SETUP ---
+
 function setupGui() {
-  pane = new Tweakpane.Pane({ title: 'MODULOR SOLID' });
-  const proj = pane.addFolder({ title: 'PROJECT' });
-  proj.addButton({ title: 'Copy Share Link' }).on('click', async () => {
+  pane = new Tweakpane.Pane({ title: 'MODULOR SYSTEM' });
+
+  const projectFolder = pane.addFolder({ title: 'PROJECT' });
+  projectFolder.addButton({ title: 'Copy Share Link' }).on('click', async () => {
     saveStateToUrl();
     await navigator.clipboard.writeText(window.location.href);
-    alert("Full State URL Copied!");
+    alert("Shareable URL copied!");
   });
 
-  pane.addInput(paneParams, 'firstPerson', { label: 'Walk Mode (V)' }).on('change', (ev)=> { isFPV = ev.value; saveStateToUrl(); });
+  pane.addInput(paneParams, 'firstPerson', { label: 'Walk Mode (V)' }).on('change', (ev)=> isFPV = ev.value);
   
-  const tool = pane.addFolder({ title: 'TOOL SETTINGS' });
-  tool.addInput(paneParams, 'orientation', { options: { Floor: 'FLOOR', Wall: 'WALL' }, label: 'Type' });
-  tool.addInput(paneParams, 'wallBlocks', { min: 1, max: 80, step: 1, label: 'Height' })
-    .on('change', (ev) => { if (selectedPlane) { selectedPlane.numBlocks = ev.value; selectedPlane.updateBounds(); saveStateToUrl(); } });
-  tool.addInput(paneParams, 'wallDepth', { min: 0, max: 20, step: 1, label: 'Thickness' })
-    .on('change', (ev) => { if (selectedPlane) { selectedPlane.depthBlocks = ev.value; selectedPlane.updateBounds(); saveStateToUrl(); } });
+  const toolFolder = pane.addFolder({ title: 'TOOL SETTINGS' });
+  toolFolder.addInput(paneParams, 'orientation', { options: { Floor: 'FLOOR', Wall: 'WALL' }, label: 'Type' });
+  toolFolder.addInput(paneParams, 'wallBlocks', { min: 1, max: 80, step: 1, label: 'Height Index' })
+    .on('change', (ev) => { if (selectedPlane) { selectedPlane.numBlocks = ev.value; saveStateToUrl(); } });
+  toolFolder.addInput(paneParams, 'wallDepth', { min: 0, max: 20, step: 1, label: 'Thickness Index' })
+    .on('change', (ev) => { if (selectedPlane) { selectedPlane.depthBlocks = ev.value; saveStateToUrl(); } });
 
-  const pos = pane.addFolder({ title: 'POSITION' });
-  pos.addInput(paneParams, 'moveX', { min: 0, max: 100, step: 1, label: 'X Index' }).on('change', (ev) => { movePlaneToGrid('x', ev.value); saveStateToUrl(); });
-  pos.addInput(paneParams, 'elevation', { min: 0, max: 100, step: 1, label: 'Elevation' }).on('change', (ev) => { if (selectedPlane) { selectedPlane.elevBlocks = ev.value; selectedPlane.updateBounds(); saveStateToUrl(); } });
-  pos.addInput(paneParams, 'moveZ', { min: 0, max: 100, step: 1, label: 'Z Index' }).on('change', (ev) => { movePlaneToGrid('z', ev.value); saveStateToUrl(); });
-  
   pane.addInput(paneParams, 'showSecondary', { label: '20cm Grid' }).on('change', saveStateToUrl);
-  pane.addInput(paneParams, 'rotation', { min: 0, max: 360, step: 1, label: 'Orbit' }).on('change', saveStateToUrl);
 
-  const help = pane.addFolder({ title: 'HELP / CONTROLS', expanded: false });
-  help.addMonitor({text: 'SHIFT + Drag'}, 'text', {label: 'Draw Plane'});
-  help.addMonitor({text: 'WASD Keys'}, 'text', {label: 'Walk'});
-  help.addMonitor({text: 'Key [V]'}, 'text', {label: 'First Person'});
-  help.addMonitor({text: 'Key [H]'}, 'text', {label: 'Hide Grid'});
-  help.addMonitor({text: 'Click + Drag Plane'}, 'text', {label: 'Move Object'});
+  const posFolder = pane.addFolder({ title: 'POSITION' });
+  // Adjusted limits to allow negative movement
+  posFolder.addInput(paneParams, 'moveX', { min: -100, max: 200, step: 1, label: 'X Index' }).on('change', (ev) => { movePlaneToGrid('x', ev.value); saveStateToUrl(); });
+  posFolder.addInput(paneParams, 'elevation', { min: -50, max: 100, step: 1, label: 'Elevation' }).on('change', (ev) => { if (selectedPlane) { selectedPlane.elevBlocks = ev.value; saveStateToUrl(); } });
+  posFolder.addInput(paneParams, 'moveZ', { min: -100, max: 200, step: 1, label: 'Z Index' }).on('change', (ev) => { movePlaneToGrid('z', ev.value); saveStateToUrl(); });
+
+  const boundFolder = pane.addFolder({ title: 'LIMITS' });
+  boundFolder.addInput(paneParams, 'boundaryX', { min: 1, max: 35, step: 1, label: 'Limit X' }).on('change', saveStateToUrl);
+  boundFolder.addInput(paneParams, 'boundaryZ', { min: 1, max: 35, step: 1, label: 'Limit Z' }).on('change', saveStateToUrl);
+  
+  pane.addInput(paneParams, 'rotation', { min: 0, max: 360, step: 1, label: 'Orbit' });
 }
 
-// --- CORE UTILS (Untouched Logic) ---
-
-function renderGridSubset(lines, drawY, xLim, zLim) {
-  for (let l of lines) {
-    stroke(l.color); strokeWeight(l.weight);
-    let isOnTargetFloor = (abs(l.p1.y - drawY) < 0.1 && abs(l.p2.y - drawY) < 0.1);
-    if (showFullGrid) {
-      line(l.p1.x, l.p1.y, l.p1.z, l.p2.x, l.p2.y, l.p2.z);
-    } else if (isOnTargetFloor) {
-      let x1 = constrain(l.p1.x, 0, xLim); let x2 = constrain(l.p2.x, 0, xLim);
-      let z1 = constrain(l.p1.z, 0, zLim); let z2 = constrain(l.p2.z, 0, zLim);
-      if (dist(x1, 0, z1, x2, 0, z2) > 0.5) line(x1, drawY, z1, x2, drawY, z2);
-    }
-  }
+function selectPlane(p) {
+  deselectAll(); selectedPlane = p; selectedPlane.isSelected = true;
+  paneParams.elevation = p.elevBlocks; 
+  paneParams.wallBlocks = p.numBlocks;
+  paneParams.wallDepth = p.depthBlocks;
+  syncMoveSliders(); pane.refresh();
 }
-function generateGridData() {
-  vertices3D = []; gridLinesPrimary = []; gridLinesSecondary = [];
-  let coords1 = [0]; let cur1 = 0; let coords2 = [0]; let cur2 = 0;
-  for (let i = 0; i < SUBDIVISIONS; i++) { cur1 += PATTERN_1[i % PATTERN_1.length]; coords1.push(cur1 * PIXELS_PER_CM); }
-  let maxL = coords1[coords1.length - 1];
-  while (cur2 * PIXELS_PER_CM < maxL) { cur2 += PATTERN_2[(coords2.length - 1) % PATTERN_2.length]; coords2.push(cur2 * PIXELS_PER_CM); }
-  function createLines(coordsArr, col, wt, targetList) {
-    for (let v of coordsArr) {
-      targetList.push({ p1: createVector(v, 0, 0), p2: createVector(v, 0, maxL), color: col, weight: wt });
-      targetList.push({ p1: createVector(0, 0, v), p2: createVector(maxL, 0, v), color: col, weight: wt });
-      targetList.push({ p1: createVector(v, 0, 0), p2: createVector(v, -maxL, 0), color: col, weight: wt });
-      targetList.push({ p1: createVector(0, -v, 0), p2: createVector(maxL, -v, 0), color: col, weight: wt });
-      targetList.push({ p1: createVector(0, 0, v), p2: createVector(0, -maxL, v), color: col, weight: wt });
-      targetList.push({ p1: createVector(0, -v, 0), p2: createVector(0, -v, maxL), color: col, weight: wt });
-    }
-  }
-  createLines(coords2, color(255, 170, 0, 80), 1, gridLinesSecondary); 
-  createLines(coords1, color(180), 1.5, gridLinesPrimary);             
-  let allSet = new Set([...coords1, ...coords2]);
-  mergedCoords = Array.from(allSet).map(v => Math.round(v * 1000) / 1000).sort((a, b) => a - b);
-  for (let v of mergedCoords) { for (let v2 of mergedCoords) { vertices3D.push(createVector(v, 0, v2)); vertices3D.push(createVector(v, -v2, 0)); vertices3D.push(createVector(0, -v2, v)); } }
-}
-function getPrimaryGridDist(numBlocks) { let d = 0; for (let i = 0; i < numBlocks; i++) d += PATTERN_1[i % PATTERN_1.length]; return d * PIXELS_PER_CM; }
-function getGridDist(index) { if (index >= mergedCoords.length) return mergedCoords[mergedCoords.length - 1]; return mergedCoords[index]; }
-function findGridIndex(pos) { let bestIdx = 0; let minDist = Infinity; for (let i = 0; i < mergedCoords.length; i++) { let d = abs(mergedCoords[i] - pos); if (d < minDist) { minDist = d; bestIdx = i; } } return bestIdx; }
-function selectPlane(p) { deselectAll(); selectedPlane = p; selectedPlane.isSelected = true; paneParams.elevation = p.elevBlocks; paneParams.wallBlocks = p.numBlocks; paneParams.wallDepth = p.depthBlocks; syncMoveSliders(); pane.refresh(); }
 function deselectAll() { if (selectedPlane) selectedPlane.isSelected = false; selectedPlane = null; pane.refresh(); }
-function syncMoveSliders() { if (!selectedPlane) return; paneParams.moveX = findGridIndex(selectedPlane.p1.x); paneParams.moveZ = findGridIndex(selectedPlane.p1.z); pane.refresh(); }
-function movePlaneToGrid(axis, index) { if (!selectedPlane) return; let target = getGridDist(index); if (axis === 'x') { let diff = target - selectedPlane.p1.x; selectedPlane.p1.x += diff; selectedPlane.p2.x += diff; } else { let diff = target - selectedPlane.p1.z; selectedPlane.p1.z += diff; selectedPlane.p2.z += diff; } selectedPlane.updateBounds(); }
-function getManualScreenPos(x, y, z) { let r = _renderer; let mvp = r.uMVMatrix.copy().mult(r.uPMatrix); let x4 = x * mvp.mat4[0] + y * mvp.mat4[4] + z * mvp.mat4[8] + mvp.mat4[12]; let y4 = x * mvp.mat4[1] + y * mvp.mat4[5] + z * mvp.mat4[9] + mvp.mat4[13]; let w4 = x * mvp.mat4[3] + y * mvp.mat4[7] + z * mvp.mat4[11] + mvp.mat4[15]; return { x: (x4 / w4 + 1) * width / 2, y: (1 - y4 / w4) * height / 2 }; }
-function getClosestVertex(xLim, zLim, elev) { let closest = null; let minDist = Infinity; let targetY = -getGridDist(elev); for (let v of vertices3D) { if (abs(v.y - targetY) > 0.1) continue; let sPos = getManualScreenPos(v.x, v.y, v.z); let d = dist(mouseX, mouseY, sPos.x, sPos.y); if (d < minDist && d < 35) { minDist = d; closest = v; } } return closest; }
-function mouseReleased() { if (isDragging && startV && currentV) { if (dist(startV.x, startV.y, startV.z, currentV.x, currentV.y, currentV.z) > 1) { planes.push(new GridPlane(startV, currentV)); saveStateToUrl(); } } if (isMovingPlane) saveStateToUrl(); isDragging = false; isMovingPlane = false; startV = null; }
-function mouseDragged() { if (!isMouseOverGui() && !isDragging && !isMovingPlane && !isFPV) { paneParams.rotation = (paneParams.rotation - movedX * 0.5) % 360; pane.refresh(); } }
-function mouseWheel(event) { if (!isMouseOverGui() && !isFPV) { camDist = constrain(camDist + event.delta, 100, 2500); return false; } }
+function syncMoveSliders() {
+  if (!selectedPlane) return;
+  paneParams.moveX = findGridIndex(selectedPlane.p1.x); 
+  paneParams.moveZ = findGridIndex(selectedPlane.p1.z);
+  pane.refresh();
+}
+function movePlaneToGrid(axis, index) {
+  if (!selectedPlane) return;
+  let targetCoord = getGridDist(index);
+  if (axis === 'x') { let diff = targetCoord - selectedPlane.p1.x; selectedPlane.p1.x += diff; selectedPlane.p2.x += diff; } 
+  else { let diff = targetCoord - selectedPlane.p1.z; selectedPlane.p1.z += diff; selectedPlane.p2.z += diff; }
+  selectedPlane.updateBounds();
+}
+function getClosestVertex(xLim, zLim, elev) {
+  let closest = null; let minDist = Infinity; let targetY = -getGridDist(elev);
+  for (let v of vertices3D) {
+    if (abs(v.y - targetY) > 0.1) continue; 
+    let sPos = getManualScreenPos(v.x, v.y, v.z);
+    let d = dist(mouseX, mouseY, sPos.x, sPos.y);
+    if (d < minDist && d < 35) { minDist = d; closest = v; }
+  }
+  return closest;
+}
+function getManualScreenPos(x, y, z) {
+  let r = _renderer; let mvp = r.uMVMatrix.copy().mult(r.uPMatrix);
+  let x4 = x * mvp.mat4[0] + y * mvp.mat4[4] + z * mvp.mat4[8] + mvp.mat4[12];
+  let y4 = x * mvp.mat4[1] + y * mvp.mat4[5] + z * mvp.mat4[9] + mvp.mat4[13];
+  let w4 = x * mvp.mat4[3] + y * mvp.mat4[7] + z * mvp.mat4[11] + mvp.mat4[15];
+  return { x: (x4 / w4 + 1) * width / 2, y: (1 - y4 / w4) * height / 2 };
+}
 function drawUI() { if (currentV) { push(); translate(currentV.x, currentV.y, currentV.z); fill(255, 0, 100); noStroke(); sphere(2); pop(); } }
 function isMouseOverGui() { const g = document.querySelector('.tp-dfwv'); return g ? (mouseX >= g.getBoundingClientRect().left && mouseX <= g.getBoundingClientRect().right && mouseY >= g.getBoundingClientRect().top && mouseY <= g.getBoundingClientRect().bottom) : false; }
 function windowResized() { resizeCanvas(windowWidth, windowHeight); }
