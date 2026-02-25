@@ -406,9 +406,9 @@ function setupGui() {
   pane.addInput(paneParams, 'showSecondary', { label: '20cm Grid' }).on('change', saveStateToUrl);
 
   const posFolder = pane.addFolder({ title: 'POSITION' });
-  posFolder.addInput(paneParams, 'moveX', { min: 0, max: 200, step: 1, label: 'X Index' }).on('change', (ev) => { movePlaneToGrid('x', ev.value); saveStateToUrl(); });
+  posFolder.addInput(paneParams, 'moveX', { min: -200, max: 200, step: 1, label: 'X Index' }).on('change', (ev) => { movePlaneToGrid('x', ev.value); saveStateToUrl(); });
   posFolder.addInput(paneParams, 'elevation', { min: 0, max: 100, step: 1, label: 'Elevation' }).on('change', (ev) => { if (selectedPlane) { selectedPlane.elevBlocks = ev.value; saveStateToUrl(); } });
-  posFolder.addInput(paneParams, 'moveZ', { min: 0, max: 200, step: 1, label: 'Z Index' }).on('change', (ev) => { movePlaneToGrid('z', ev.value); saveStateToUrl(); });
+  posFolder.addInput(paneParams, 'moveZ', { min: -200, max: 200, step: 1, label: 'Z Index' }).on('change', (ev) => { movePlaneToGrid('z', ev.value); saveStateToUrl(); });
 
   const boundFolder = pane.addFolder({ title: 'LIMITS' });
   boundFolder.addInput(paneParams, 'boundaryX', { min: 1, max: 35, step: 1, label: 'Limit X' }).on('change', saveStateToUrl);
