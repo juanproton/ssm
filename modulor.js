@@ -44,18 +44,47 @@ let paneParams = {
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL);
   
-  // --- INJECT SCROLLBAR CSS ---
+  // --- INJECT CUSTOM CSS FOR GRID BUTTONS AND SCROLLING ---
   const style = document.createElement('style');
   style.innerHTML = `
-    .tp-dfwv {
-      max-height: 85vh !important;
-      overflow-y: auto !important;
-      scrollbar-width: thin;
-      scrollbar-color: #444 #222;
+    /* Main container max height */
+    .tp-dfwv { max-height: 95vh !important; overflow-y: auto !important; }
+
+    /* Scene Grid Folder Styling */
+    .scene-grid-container {
+      max-height: 300px; /* Limits the list height */
+      overflow-y: auto;
+      padding: 5px;
+      background: #1a1a1a;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: flex-start;
     }
-    .tp-dfwv::-webkit-scrollbar { width: 6px; }
-    .tp-dfwv::-webkit-scrollbar-track { background: #222; }
-    .tp-dfwv::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+    /* Make buttons square and tiny */
+    .scene-grid-container button {
+      width: 40px !important;
+      height: 40px !important;
+      padding: 0 !important;
+      font-size: 10px !important;
+      flex: 0 0 auto;
+      border-radius: 4px;
+      background-color: #333;
+    }
+
+    /* Highlight button for selected plane */
+    .scene-grid-container button.selected-plane-btn {
+      background-color: #ff9900 !important;
+      color: #000 !important;
+      font-weight: bold;
+    }
+    
+    /* Hidden status indicator */
+    .scene-grid-container button.hidden-plane-btn {
+      border: 1px dashed #666;
+      opacity: 0.6;
+    }
   `;
   document.head.appendChild(style);
 
@@ -341,17 +370,36 @@ function setupGui() {
   
   pane.addInput(paneParams, 'rotation', { min: 0, max: 360, step: 1, label: 'Orbit' });
 
+  // SCENE LIST - Folder with custom container for scrolling and grid layout
   planesFolder = pane.addFolder({ title: 'SCENE LIST', expanded: true });
 }
 
 function updatePlanesList() {
-  const children = [...planesFolder.children];
-  children.forEach(c => planesFolder.remove(c));
+  const folderElem = planesFolder.controller_.view.element;
+  // Clear only buttons, keeping the folder header
+  const containerId = 'scene-grid-container';
+  let container = folderElem.querySelector(`#${containerId}`);
+  
+  if (!container) {
+    container = document.createElement('div');
+    container.id = containerId;
+    container.className = 'scene-grid-container';
+    folderElem.appendChild(container);
+  } else {
+    container.innerHTML = '';
+  }
 
   planes.forEach((p, i) => {
-    planesFolder.addButton({ title: `Select Plane ${i + 1} ${p.hidden ? '(HIDDEN)' : ''}` }).on('click', () => {
-      selectPlane(p);
-    });
+    const btn = document.createElement('button');
+    btn.innerText = i + 1;
+    btn.title = `Plane ${i + 1} (${p.type})`;
+    
+    // Classes for state
+    if (selectedPlane === p) btn.classList.add('selected-plane-btn');
+    if (p.hidden) btn.classList.add('hidden-plane-btn');
+    
+    btn.onclick = () => selectPlane(p);
+    container.appendChild(btn);
   });
 }
 
@@ -361,10 +409,12 @@ function selectPlane(p) {
   paneParams.wallBlocks = p.numBlocks;
   paneParams.wallDepth = p.depthBlocks;
   paneParams.hidden = p.hidden;
-  syncMoveSliders(); pane.refresh();
+  syncMoveSliders(); 
+  updatePlanesList();
+  pane.refresh();
 }
 
-function deselectAll() { if (selectedPlane) selectedPlane.isSelected = false; selectedPlane = null; pane.refresh(); }
+function deselectAll() { if (selectedPlane) selectedPlane.isSelected = false; selectedPlane = null; updatePlanesList(); pane.refresh(); }
 
 function syncMoveSliders() {
   if (!selectedPlane) return;
