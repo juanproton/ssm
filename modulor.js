@@ -25,7 +25,7 @@ let isFPV = false;
 
 let character; 
 let pane;
-let planesFolder; // Reference for dynamic updates
+let planesFolder; 
 let paneParams = { 
   firstPerson: false,
   orientation: 'WALL', 
@@ -38,11 +38,27 @@ let paneParams = {
   boundaryX: 15,  
   boundaryZ: 11,
   rotation: 45,
-  hidden: false // New state
+  hidden: false 
 }; 
 
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL);
+  
+  // --- INJECT SCROLLBAR CSS ---
+  const style = document.createElement('style');
+  style.innerHTML = `
+    .tp-dfwv {
+      max-height: 85vh !important;
+      overflow-y: auto !important;
+      scrollbar-width: thin;
+      scrollbar-color: #444 #222;
+    }
+    .tp-dfwv::-webkit-scrollbar { width: 6px; }
+    .tp-dfwv::-webkit-scrollbar-track { background: #222; }
+    .tp-dfwv::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+  `;
+  document.head.appendChild(style);
+
   generateGridData(); 
   character = new Character();
   setupGui();
@@ -122,12 +138,12 @@ function saveStateToUrl() {
     p: planes.map(p => ({
       px1: p.p1.x, pz1: p.p1.z, px2: p.p2.x, pz2: p.p2.z,
       t: p.type === 'WALL' ? 1 : 0, h: p.numBlocks, d: p.depthBlocks, e: p.elevBlocks,
-      hid: p.hidden ? 1 : 0 // Save hidden state
+      hid: p.hidden ? 1 : 0 
     })),
     s: { bx: paneParams.boundaryX, bz: paneParams.boundaryZ, rt: Math.round(paneParams.rotation), sc: paneParams.showSecondary }
   };
   window.history.replaceState(null, null, "#" + btoa(JSON.stringify(state)));
-  updatePlanesList(); // Refresh GUI list
+  updatePlanesList(); 
 }
 
 function loadStateFromUrl() {
@@ -153,7 +169,7 @@ function loadStateFromUrl() {
   } catch (e) { console.error("Load failed", e); }
 }
 
-// --- GRID & GEOMETRY (UNTOUCHED) ---
+// --- GRID & GEOMETRY ---
 
 function renderGridSubset(lines, drawY, xLim, zLim) {
   for (let l of lines) {
@@ -220,7 +236,7 @@ class GridPlane {
   }
   getYPos() { return -getGridDist(this.elevBlocks); }
   display(isPreview = false) {
-    if (this.hidden && !this.isSelected && !isPreview) return; // Completely hide
+    if (this.hidden && !this.isSelected && !isPreview) return; 
     
     push();
     let yPos = this.getYPos();
@@ -246,7 +262,7 @@ class GridPlane {
     if (isPreview) {
       fill(100, 150, 255, 100); stroke(100, 150, 255);
     } else if (this.hidden && this.isSelected) {
-      noFill(); stroke(255, 100, 0); strokeWeight(1); // Borders only if hidden but selected
+      noFill(); stroke(255, 100, 0); strokeWeight(1); 
     } else {
       if (this.isSelected) { fill(255, 200, 0, 180); stroke(255, 100, 0); strokeWeight(2); } 
       else { fill(230, 230, 245, 180); stroke(50); strokeWeight(1); }
@@ -309,7 +325,6 @@ function setupGui() {
   toolFolder.addInput(paneParams, 'wallDepth', { min: 0, max: 20, step: 1, label: 'Thickness Index' })
     .on('change', (ev) => { if (selectedPlane) { selectedPlane.depthBlocks = ev.value; saveStateToUrl(); } });
   
-  // HIDE BUTTON
   toolFolder.addInput(paneParams, 'hidden', { label: 'Hidden' })
     .on('change', (ev) => { if (selectedPlane) { selectedPlane.hidden = ev.value; saveStateToUrl(); } });
 
@@ -326,17 +341,15 @@ function setupGui() {
   
   pane.addInput(paneParams, 'rotation', { min: 0, max: 360, step: 1, label: 'Orbit' });
 
-  // SCENE LIST FOLDER
-  planesFolder = pane.addFolder({ title: 'SCENE LIST (SELECT HIDDEN)', expanded: false });
+  planesFolder = pane.addFolder({ title: 'SCENE LIST', expanded: true });
 }
 
 function updatePlanesList() {
-  // Clear the folder manually (Tweakpane approach)
   const children = [...planesFolder.children];
   children.forEach(c => planesFolder.remove(c));
 
   planes.forEach((p, i) => {
-    planesFolder.addButton({ title: `Select Plane ${i + 1} ${p.hidden ? '(H)' : ''}` }).on('click', () => {
+    planesFolder.addButton({ title: `Select Plane ${i + 1} ${p.hidden ? '(HIDDEN)' : ''}` }).on('click', () => {
       selectPlane(p);
     });
   });
@@ -389,7 +402,7 @@ function mousePressed() {
   if (!keyIsDown(SHIFT)) {
     let clickedPlane = null; let minDist = Infinity;
     for (let p of planes) {
-      if (p.hidden) continue; // Cannot click select hidden planes
+      if (p.hidden) continue; 
       let sPos = getManualScreenPos(p.centerX, p.getYPos(), p.centerZ);
       let d = dist(mouseX, mouseY, sPos.x, sPos.y);
       if (d < 50 && d < minDist) { minDist = d; clickedPlane = p; }
