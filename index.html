@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -71,12 +72,16 @@ input[type="email"] {
   padding: 10px;
   font-size: 16px;
   width: 260px;
+  border: 1px solid black;
 }
 
 button {
   padding: 10px 16px;
   font-size: 16px;
   cursor: pointer;
+  background: black;
+  color: white;
+  border: none;
 }
 
 #msg {
@@ -120,10 +125,18 @@ button {
     <div>
       Subscribe to newsletter
 
-      <form onsubmit="subscribe(event)">
-        <input type="email" id="mail" placeholder="your@email.com" required />
-        <button>Subscribe</button>
+      <!-- BREVO CONNECTED FORM -->
+      <form id="newsletter-form"
+        action="https://2aca6431.sibforms.com/serve/MUIFALDayEnwa07abYbQcQh0sZNqq3MoE1hVtkLpDcRCFIN543RP7-94aG8Y3-wszQb6mXglL48Z6LiFFuXbkgYldHYnD33qyhfj8PpXXI0fV7Z7ylj3Y0_sAuAgof4dXXiUHXg9Dv0GQX6UU5q3ZEZ1v-u1fg1w2SzifRVp6WTq1iD8pLisKADOYLbHSmB0x4kLApDXnnMR0LPSwQ=="
+        method="POST"
+        target="hidden_iframe"
+        onsubmit="handleSubmit()"
+      >
+        <input type="email" name="EMAIL" id="mail" placeholder="your@email.com" required />
+        <button type="submit">Subscribe</button>
       </form>
+
+      <iframe name="hidden_iframe" style="display:none;"></iframe>
 
       <div id="msg"></div>
     </div>
@@ -135,8 +148,6 @@ button {
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
 <script src="Random.js"></script>
 <script src="sketch.js"></script>
-
-
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -155,7 +166,7 @@ document.addEventListener("DOMContentLoaded", () => {
     apply();
   }
 
-  // ─── DESKTOP ────────────────────────
+  // scroll desktop
   window.addEventListener("wheel", e => {
     e.preventDefault();
     if (locked) return;
@@ -169,14 +180,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     apply();
 
-    setTimeout(() => {
-      locked = false;
-    }, 1100);
-
+    setTimeout(() => locked = false, 1100);
   }, { passive: false });
 
-
-  // ─── MOBILE ─────────────────────────
+  // mobile
   let startY = 0;
 
   window.addEventListener("touchstart", e => {
@@ -204,21 +211,20 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   window.addEventListener("resize", apply);
-
 });
 
-// ─── FAKE SUBSCRIBE DEMO ─────────────────
-function subscribe(e) {
-  e.preventDefault();
-
+// submit feedback (sin recargar)
+function handleSubmit() {
+  const msg = document.getElementById("msg");
   const mail = document.getElementById("mail").value;
-  const msg  = document.getElementById("msg");
 
-  msg.innerText = "Thanks! " + mail + " subscribed.";
-
-  document.getElementById("mail").value = "";
+  setTimeout(() => {
+    msg.innerText = "you're in → " + mail;
+    document.getElementById("mail").value = "";
+  }, 300);
 }
 </script>
 
 </body>
 </html>
+```
