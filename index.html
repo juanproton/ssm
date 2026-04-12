@@ -5,6 +5,9 @@
 <meta charset="utf-8" />
 <title>Juan Pedro Vallejo</title>
 
+<!-- Brevo styles -->
+<link rel="stylesheet" href="https://sibforms.com/forms/end-form/build/sib-styles.css">
+
 <style>
 body {
   margin: 0;
@@ -61,32 +64,20 @@ nav a {
   position: relative;
 }
 
-/* ─── FORM ───────────────────────────── */
-form {
-  margin-top: 20px;
-  display: flex;
-  gap: 10px;
+/* limpiar estilos de brevo */
+.sib-container {
+  border: none !important;
+  background: transparent !important;
 }
 
-input[type="email"] {
-  padding: 10px;
-  font-size: 16px;
-  width: 260px;
-  border: 1px solid black;
+.sib-form-block__button {
+  background: black !important;
+  color: white !important;
+  border-radius: 0 !important;
 }
 
-button {
-  padding: 10px 16px;
-  font-size: 16px;
-  cursor: pointer;
-  background: black;
-  color: white;
-  border: none;
-}
-
-#msg {
-  margin-top: 15px;
-  font-size: 14px;
+input {
+  border: 1px solid black !important;
 }
 </style>
 </head>
@@ -102,14 +93,17 @@ button {
 
 <div id="wrapper">
 
+  <!-- INIT -->
   <div class="section" id="init">
     <div id="p5-container"></div>
   </div>
 
+  <!-- ART -->
   <div class="section" id="art">
     ART
   </div>
 
+  <!-- WHO -->
   <div class="section" id="who">
     <div>
       JUAN PEDRO VALLEJO<br>
@@ -117,25 +111,46 @@ button {
     </div>
   </div>
 
+  <!-- SUBSCRIBE -->
   <div class="section" id="subscribe">
-    <div>
-      Subscribe to newsletter
 
-      <!-- BREVO CLEAN FORM -->
-      <form 
-        action="https://2aca6431.sibforms.com/serve/MUIFALDayEnwa07abYbQcQh0sZNqq3MoE1hVtkLpDcRCFIN543RP7-94aG8Y3-wszQb6mXglL48Z6LiFFuXbkgYldHYnD33qyhfj8PpXXI0fV7Z7ylj3Y0_sAuAgof4dXXiUHXg9Dv0GQX6UU5q3ZEZ1v-u1fg1w2SzifRVp6WTq1iD8pLisKADOYLbHSmB0x4kLApDXnnMR0LPSwQ=="
-        method="POST"
-        target="hidden_iframe"
-        onsubmit="handleSubmit()"
-      >
-        <input type="email" name="EMAIL" id="mail" placeholder="your@email.com" required />
-        <button type="submit">Subscribe</button>
-      </form>
+    <div class="sib-form" style="text-align: center; background-color: transparent;">
+      <div id="sib-form-container" class="sib-form-container">
 
-      <iframe name="hidden_iframe" style="display:none;"></iframe>
+        <div id="sib-container"
+          class="sib-container--large sib-container--vertical"
+          style="text-align:center; background-color:transparent; border:none;">
 
-      <div id="msg"></div>
+          <form id="sib-form" method="POST"
+            action="https://2aca6431.sibforms.com/serve/MUIFALDayEnwa07abYbQcQh0sZNqq3MoE1hVtkLpDcRCFIN543RP7-94aG8Y3-wszQb6mXglL48Z6LiFFuXbkgYldHYnD33qyhfj8PpXXI0fV7Z7ylj3Y0_sAuAgof4dXXiUHXg9Dv0GQX6UU5q3ZEZ1v-u1fg1w2SzifRVp6WTq1iD8pLisKADOYLbHSmB0x4kLApDXnnMR0LPSwQ==">
+
+            <div class="sib-input sib-form-block">
+              <div class="entry__field">
+                <input class="input"
+                  type="email"
+                  id="EMAIL"
+                  name="EMAIL"
+                  placeholder="your@email.com"
+                  required />
+              </div>
+            </div>
+
+            <div class="sib-form-block">
+              <button type="submit"
+                class="sib-form-block__button">
+                Subscribe
+              </button>
+            </div>
+
+            <input type="hidden" name="locale" value="es">
+            <input type="hidden" name="html_type" value="simple">
+
+          </form>
+
+        </div>
+      </div>
     </div>
+
   </div>
 
 </div>
@@ -204,17 +219,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   window.addEventListener("resize", apply);
+
 });
-
-function handleSubmit() {
-  const msg = document.getElementById("msg");
-  const mail = document.getElementById("mail").value;
-
-  setTimeout(() => {
-    msg.innerText = "you're in → " + mail;
-    document.getElementById("mail").value = "";
-  }, 300);
-}
 </script>
 
 </body>
