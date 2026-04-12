@@ -5,9 +5,6 @@
 <meta charset="utf-8" />
 <title>Juan Pedro Vallejo</title>
 
-<!-- Brevo styles -->
-<link rel="stylesheet" href="https://sibforms.com/forms/end-form/build/sib-styles.css">
-
 <style>
 body {
   margin: 0;
@@ -63,23 +60,57 @@ nav a {
   height: 100%;
   position: relative;
 }
-
-/* limpiar estilos de brevo */
-.sib-container {
-  border: none !important;
-  background: transparent !important;
-}
-
-.sib-form-block__button {
-  background: black !important;
-  color: white !important;
-  border-radius: 0 !important;
-}
-
-input {
-  border: 1px solid black !important;
-}
 </style>
+
+<!-- Begin Brevo Form HEAD -->
+<style>
+  @font-face {
+    font-display: block;
+    font-family: Roboto;
+    src: url(https://assets.brevo.com/font/Roboto/Latin/normal/normal/7529907e9eaf8ebb5220c5f9850e3811.woff2) format("woff2"), url(https://assets.brevo.com/font/Roboto/Latin/normal/normal/25c678feafdc175a70922a116c9be3e7.woff) format("woff")
+  }
+
+  @font-face {
+    font-display: fallback;
+    font-family: Roboto;
+    font-weight: 600;
+    src: url(https://assets.brevo.com/font/Roboto/Latin/medium/normal/6e9caeeafb1f3491be3e32744bc30440.woff2) format("woff2"), url(https://assets.brevo.com/font/Roboto/Latin/medium/normal/71501f0d8d5aa95960f6475d5487d4c2.woff) format("woff")
+  }
+
+  @font-face {
+    font-display: fallback;
+    font-family: Roboto;
+    font-weight: 700;
+    src: url(https://assets.brevo.com/font/Roboto/Latin/bold/normal/3ef7cf158f310cf752d5ad08cd0e7e60.woff2) format("woff2"), url(https://assets.brevo.com/font/Roboto/Latin/bold/normal/ece3a1d82f18b60bcce0211725c476aa.woff) format("woff")
+  }
+
+  #sib-container input:-ms-input-placeholder {
+    text-align: left;
+    font-family: Helvetica, sans-serif;
+    color: #c0ccda;
+  }
+
+  #sib-container input::placeholder {
+    text-align: left;
+    font-family: Helvetica, sans-serif;
+    color: #c0ccda;
+  }
+
+  #sib-container textarea::placeholder {
+    text-align: left;
+    font-family: Helvetica, sans-serif;
+    color: #c0ccda;
+  }
+
+  #sib-container a {
+    text-decoration: underline;
+    color: #2BB2FC;
+  }
+</style>
+
+<link rel="stylesheet" href="https://sibforms.com/forms/end-form/build/sib-styles.css">
+<!-- End Brevo Form HEAD -->
+
 </head>
 
 <body>
@@ -93,17 +124,14 @@ input {
 
 <div id="wrapper">
 
-  <!-- INIT -->
   <div class="section" id="init">
     <div id="p5-container"></div>
   </div>
 
-  <!-- ART -->
   <div class="section" id="art">
     ART
   </div>
 
-  <!-- WHO -->
   <div class="section" id="who">
     <div>
       JUAN PEDRO VALLEJO<br>
@@ -114,42 +142,55 @@ input {
   <!-- SUBSCRIBE -->
   <div class="section" id="subscribe">
 
-    <div class="sib-form" style="text-align: center; background-color: transparent;">
+    <!-- Begin Brevo Form BODY -->
+    <div class="sib-form" style="text-align: center; background-color: #EFF2F7;">
       <div id="sib-form-container" class="sib-form-container">
 
-        <div id="sib-container"
-          class="sib-container--large sib-container--vertical"
-          style="text-align:center; background-color:transparent; border:none;">
+        <div id="error-message" class="sib-form-message-panel" style="font-size:16px; text-align:left; font-family:Helvetica, sans-serif; color:#661d1d; background-color:#ffeded; border-radius:3px; border-color:#ff4949;max-width:540px;">
+          <div class="sib-form-message-panel__text sib-form-message-panel__text--center">
+            <span class="sib-form-message-panel__inner-text">
+              No hemos podido validar tu suscripción.
+            </span>
+          </div>
+        </div>
+
+        <div id="success-message" class="sib-form-message-panel" style="font-size:16px; text-align:left; font-family:Helvetica, sans-serif; color:#085229; background-color:#e7faf0; border-radius:3px; border-color:#13ce66;max-width:540px;">
+          <div class="sib-form-message-panel__text sib-form-message-panel__text--center">
+            <span class="sib-form-message-panel__inner-text">
+              Se ha realizado tu suscripción.
+            </span>
+          </div>
+        </div>
+
+        <div id="sib-container" class="sib-container--large sib-container--vertical" style="text-align:center; background-color:rgba(255,255,255,1); max-width:540px; border-radius:3px; border-width:1px; border-color:#C0CCD9; border-style:solid;">
 
           <form id="sib-form" method="POST"
-            action="https://2aca6431.sibforms.com/serve/MUIFALDayEnwa07abYbQcQh0sZNqq3MoE1hVtkLpDcRCFIN543RP7-94aG8Y3-wszQb6mXglL48Z6LiFFuXbkgYldHYnD33qyhfj8PpXXI0fV7Z7ylj3Y0_sAuAgof4dXXiUHXg9Dv0GQX6UU5q3ZEZ1v-u1fg1w2SzifRVp6WTq1iD8pLisKADOYLbHSmB0x4kLApDXnnMR0LPSwQ==">
+            action="https://2aca6431.sibforms.com/serve/MUIFALDayEnwa07abYbQcQh0sZNqq3MoE1hVtkLpDcRCFIN543RP7-94aG8Y3-wszQb6mXglL48Z6LiFFuXbkgYldHYnD33qyhfj8PpXXI0fV7Z7ylj3Y0_sAuAgof4dXXiUHXg9Dv0GQX6UU5q3ZEZ1v-u1fg1w2SzifRVp6WTq1iD8pLisKADOYLbHSmB0x4kLApDXnnMR0LPSwQ=="
+            data-type="subscription">
 
-            <div class="sib-input sib-form-block">
-              <div class="entry__field">
-                <input class="input"
-                  type="email"
-                  id="EMAIL"
-                  name="EMAIL"
-                  placeholder="your@email.com"
-                  required />
+            <div style="padding: 8px 0;">
+              <div class="sib-input sib-form-block">
+                <div class="entry__field">
+                  <input class="input" type="text" name="EMAIL" placeholder="EMAIL" required />
+                </div>
               </div>
             </div>
 
-            <div class="sib-form-block">
-              <button type="submit"
-                class="sib-form-block__button">
-                Subscribe
-              </button>
+            <div style="padding: 8px 0;">
+              <div class="sib-form-block">
+                <button class="sib-form-block__button" type="submit">
+                  SUSCRIBIRSE
+                </button>
+              </div>
             </div>
 
             <input type="hidden" name="locale" value="es">
-            <input type="hidden" name="html_type" value="simple">
-
           </form>
 
         </div>
       </div>
     </div>
+    <!-- End Brevo Form BODY -->
 
   </div>
 
@@ -222,6 +263,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 </script>
+
+<!-- Brevo FOOTER -->
+<script>
+window.REQUIRED_ERROR_MESSAGE = "Este campo no puede quedarse vacío.";
+</script>
+<script defer src="https://sibforms.com/forms/end-form/build/main.js"></script>
 
 </body>
 </html>
