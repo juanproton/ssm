@@ -102,17 +102,14 @@ button {
 
 <div id="wrapper">
 
-  <!-- ─── INIT (p5) ─────────────────── -->
   <div class="section" id="init">
     <div id="p5-container"></div>
   </div>
 
-  <!-- ─── ART ───────────────────────── -->
   <div class="section" id="art">
     ART
   </div>
 
-  <!-- ─── WHO ───────────────────────── -->
   <div class="section" id="who">
     <div>
       JUAN PEDRO VALLEJO<br>
@@ -120,13 +117,12 @@ button {
     </div>
   </div>
 
-  <!-- ─── SUBSCRIBE ─────────────────── -->
   <div class="section" id="subscribe">
     <div>
       Subscribe to newsletter
 
-      <!-- BREVO CONNECTED FORM -->
-      <form id="newsletter-form"
+      <!-- BREVO CLEAN FORM -->
+      <form 
         action="https://2aca6431.sibforms.com/serve/MUIFALDayEnwa07abYbQcQh0sZNqq3MoE1hVtkLpDcRCFIN543RP7-94aG8Y3-wszQb6mXglL48Z6LiFFuXbkgYldHYnD33qyhfj8PpXXI0fV7Z7ylj3Y0_sAuAgof4dXXiUHXg9Dv0GQX6UU5q3ZEZ1v-u1fg1w2SzifRVp6WTq1iD8pLisKADOYLbHSmB0x4kLApDXnnMR0LPSwQ=="
         method="POST"
         target="hidden_iframe"
@@ -144,7 +140,6 @@ button {
 
 </div>
 
-<!-- ─── LIBS ─────────────────────────── -->
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
 <script src="Random.js"></script>
 <script src="sketch.js"></script>
@@ -166,7 +161,6 @@ document.addEventListener("DOMContentLoaded", () => {
     apply();
   }
 
-  // scroll desktop
   window.addEventListener("wheel", e => {
     e.preventDefault();
     if (locked) return;
@@ -183,7 +177,6 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => locked = false, 1100);
   }, { passive: false });
 
-  // mobile
   let startY = 0;
 
   window.addEventListener("touchstart", e => {
@@ -213,7 +206,6 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("resize", apply);
 });
 
-// submit feedback (sin recargar)
 function handleSubmit() {
   const msg = document.getElementById("msg");
   const mail = document.getElementById("mail").value;
