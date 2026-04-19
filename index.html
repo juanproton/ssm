@@ -30,28 +30,43 @@ nav a {
   cursor: pointer;
 }
 
+/* ─── DROPDOWN ───────────────────────── */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-content {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  background: white;
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  z-index: 30;
+}
+
+.dropdown-content a {
+  white-space: nowrap;
+  cursor: pointer;
+}
+
 /* ─── CONTENEDOR PRINCIPAL ───────────── */
 #wrapper {
   transition: transform 0.9s ease;
-  will-change: transform;
 }
 
-/* ─── SECCIONES ──────────────────────── */
+/* ─── SECTION ────────────────────────── */
 .section {
   width: 100vw;
   height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 32px;
-  text-align: center;
-  flex-direction: column;
+  position: relative;
 }
 
-#init      { background: #e3e3ff; position: relative; }
-#work      { background: #e3ffe3; }
-#who       { background: #ffe3e3; }
-#subscribe { background: #f5e3ff; }
+#init {
+  background: #e3e3ff;
+}
 
 /* ─── P5 ─────────────────────────────── */
 #p5-container {
@@ -62,11 +77,12 @@ nav a {
   left: 0;
 }
 
+/* ─── FORM OVERLAY ───────────────────── */
 #subscribe-overlay {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -60%);
   z-index: 20;
 }
 
@@ -86,13 +102,20 @@ nav a {
 
 <nav>
   <a onclick="goTo(0)">INIT</a>
-  <a onclick="goTo(1)">WORK</a>
-  <a onclick="goTo(2)">SUBSCRIBE</a>
+
+  <div class="dropdown">
+    <a onclick="toggleMenu()">WORK</a>
+    <div id="work-menu" class="dropdown-content">
+      <a>Artblocks</a>
+      <a>Bright Moments</a>
+      <a>Interferences</a>
+      <a>Explorations</a>
+    </div>
+  </div>
 </nav>
 
 <div id="wrapper">
 
-  <!-- INIT -->
   <div class="section" id="init">
     <div id="p5-container"></div>
 
@@ -106,16 +129,6 @@ nav a {
     </div>
   </div>
 
-  <!-- WORK -->
-  <div class="section" id="work">
-    WORK
-  </div>
-
-  <!-- SUBSCRIBE (optional duplicate, you can delete if not needed) -->
-  <div class="section" id="subscribe">
-    SUBSCRIBE
-  </div>
-
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
@@ -126,8 +139,6 @@ nav a {
 document.addEventListener("DOMContentLoaded", () => {
 
   let current = 0;
-  let locked = false;
-
   const w = document.getElementById("wrapper");
 
   function apply() {
@@ -135,25 +146,23 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   window.goTo = function(i) {
-    current = Math.max(0, Math.min(2, i));
+    current = 0;
     apply();
   }
 
-  window.addEventListener("wheel", e => {
-    e.preventDefault();
-    if (locked) return;
+  window.toggleMenu = function() {
+    const menu = document.getElementById("work-menu");
+    menu.style.display = (menu.style.display === "flex") ? "none" : "flex";
+  }
 
-    locked = true;
+  document.addEventListener("click", (e) => {
+    const menu = document.getElementById("work-menu");
+    const dropdown = document.querySelector(".dropdown");
 
-    if (e.deltaY > 0) current += 1;
-    else current -= 1;
-
-    current = Math.max(0, Math.min(2, current));
-
-    apply();
-
-    setTimeout(() => locked = false, 1100);
-  }, { passive: false });
+    if (!dropdown.contains(e.target)) {
+      menu.style.display = "none";
+    }
+  });
 
 });
 </script>
