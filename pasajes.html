@@ -14,6 +14,7 @@ body {
   background: white;
 }
 
+/* NAV */
 nav {
   position: fixed;
   top: 0;
@@ -45,6 +46,7 @@ nav a,
   cursor: pointer;
 }
 
+/* DROPDOWN */
 .dropdown {
   position: relative;
 }
@@ -58,10 +60,13 @@ nav a,
   flex-direction: column;
   gap: 4px;
   padding: 10px;
-  min-width: 180px;
+  min-width: 220px;
+  z-index: 30;
 }
 
 .dropdown-content a {
+  color: black;
+  text-decoration: none;
   padding: 6px 8px;
 }
 
@@ -70,6 +75,7 @@ nav a,
   color: white;
 }
 
+/* BREVO */
 .sib-form,
 #sib-form-container,
 #sib-container {
@@ -153,8 +159,17 @@ h1 {
 }
 
 @media (max-width: 800px) {
+
   .gallery-two {
     grid-template-columns: 1fr;
+  }
+
+  main {
+    width: calc(100% - 30px);
+  }
+
+  #sib-container input {
+    width: 110px;
   }
 }
 </style>
@@ -162,52 +177,7 @@ h1 {
 
 <body>
 
-<nav>
-
-<div class="nav-left">
-  <a href="index.html" class="brand">JUAN PEDRO VALLEJO</a>
-
-  <div class="dropdown">
-    <a onclick="toggleMenu()">WORK</a>
-
-    <div id="work-menu" class="dropdown-content">
-      <a href="#">Artblocks</a>
-      <a href="#">Bright Moments</a>
-      <a href="#">Interferences</a>
-      <a href="#">Explorations</a>
-      <a href="pasajes.html">Pasajes</a>
-    </div>
-  </div>
-</div>
-
-<div class="nav-right">
-
-<div class="sib-form">
-<div id="sib-form-container">
-<div id="sib-container">
-
-<form
-id="sib-form"
-method="POST"
-action="https://2aca6431.sibforms.com/serve/MUIFALDayEnwa07abYbQcQh0sZNqq3MoE1hVtkLpDcRCFIN543RP7-94aG8Y3-wszQb6mXglL48Z6LiFFuXbkgYldHYnD33qyhfj8PpXXI0fV7Z7ylj3Y0_sAuAgof4dXXiUHXg9Dv0GQX6UU5q3ZEZ1v-u1fg1w2SzifRVp6WTq1iD8pLisKADOYLbHSmB0x4kLApDXnnMR0LPSwQ==">
-
-<div>
-<input type="email" name="EMAIL" placeholder="EMAIL" required>
-</div>
-
-<div>
-<button type="submit">Newsletter</button>
-</div>
-
-</form>
-
-</div>
-</div>
-</div>
-
-</div>
-
-</nav>
+<div id="header"></div>
 
 <main>
 
@@ -223,13 +193,11 @@ the cobblestone floor and the orange light.
 Tolosa, Buenos Aires, Argentina
 </div>
 
-<!-- FIRST BLOCK / ONE AFTER ANOTHER -->
 <div class="gallery">
   <img src="pasajes.jpg">
   <img src="pasajes1.jpg">
 </div>
 
-<!-- SECOND BLOCK / TWO COLUMNS -->
 <div class="gallery-two">
   <img src="pasajes3.png">
   <img src="pasajes4.jpg">
@@ -240,22 +208,32 @@ Tolosa, Buenos Aires, Argentina
 </main>
 
 <script>
-function toggleMenu() {
-  const menu = document.getElementById("work-menu")
+document.addEventListener("DOMContentLoaded", () => {
 
-  menu.style.display =
-    menu.style.display === "flex"
-      ? "none"
-      : "flex"
-}
+  fetch("./header.html?" + Date.now())
+  .then(response => response.text())
+  .then(data => {
+    document.getElementById("header").innerHTML = data
 
-document.addEventListener("click", (e) => {
-  const menu = document.getElementById("work-menu")
-  const dropdown = document.querySelector(".dropdown")
+    window.toggleMenu = function() {
+      const menu = document.getElementById("work-menu")
 
-  if (!dropdown.contains(e.target)) {
-    menu.style.display = "none"
-  }
+      menu.style.display =
+        menu.style.display === "flex"
+        ? "none"
+        : "flex"
+    }
+
+    document.addEventListener("click", (e) => {
+      const dropdown = document.querySelector(".dropdown")
+      const menu = document.getElementById("work-menu")
+
+      if (dropdown && !dropdown.contains(e.target)) {
+        menu.style.display = "none"
+      }
+    })
+  })
+
 })
 </script>
 
