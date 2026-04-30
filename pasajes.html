@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,7 +14,6 @@ body {
   background: white;
 }
 
-/* ─── NAV ────────────────────────────── */
 nav {
   position: fixed;
   top: 0;
@@ -47,7 +45,6 @@ nav a,
   cursor: pointer;
 }
 
-/* ─── DROPDOWN ───────────────────────── */
 .dropdown {
   position: relative;
 }
@@ -73,7 +70,6 @@ nav a,
   color: white;
 }
 
-/* ─── BREVO ──────────────────────────── */
 .sib-form,
 #sib-form-container,
 #sib-container {
@@ -110,7 +106,7 @@ nav a,
   cursor: pointer;
 }
 
-/* ─── CONTENT ────────────────────────── */
+/* CONTENT */
 main {
   padding-top: 120px;
   width: calc(100% - 80px);
@@ -130,15 +126,36 @@ h1 {
   margin-bottom: 60px;
 }
 
+/* ONE COLUMN */
 .gallery {
   display: grid;
   grid-template-columns: 1fr;
   gap: 30px;
+  margin-bottom: 60px;
 }
 
 .gallery img {
   width: 100%;
   display: block;
+}
+
+/* TWO COLUMN */
+.gallery-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-bottom: 80px;
+}
+
+.gallery-two img {
+  width: 100%;
+  display: block;
+}
+
+@media (max-width: 800px) {
+  .gallery-two {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
 </head>
@@ -198,16 +215,26 @@ action="https://2aca6431.sibforms.com/serve/MUIFALDayEnwa07abYbQcQh0sZNqq3MoE1hV
 
 <div class="description">
 Serie of generative mosaics
-  
-(...) The mosaic unfolds like another layer on that centuries-old wall. Between the brick, the crumbling, precarious plaster compromised by time, peels away and ultimately defines the final structure. Between the mold that has taken over the upper part of the wall where sunlight doesn't reach… between the utility poles that form intriguing geometries and shadows… between the cobblestone floor and the orange light of the nightlight. Between the occasional inscription left by someone who passed by and decided to leave their name; between the street signs of that passageway, which point in opposite directions at one end and the other.
+
+(...) The mosaic unfolds like another layer on that centuries-old wall.
+Between the brick, the crumbling plaster, the mold, the utility poles,
+the cobblestone floor and the orange light.
 
 Tolosa, Buenos Aires, Argentina
 </div>
 
+<!-- FIRST BLOCK / ONE AFTER ANOTHER -->
 <div class="gallery">
   <img src="pasajes.jpg">
   <img src="pasajes1.jpg">
-  <img src="pasajes2.jpg">
+</div>
+
+<!-- SECOND BLOCK / TWO COLUMNS -->
+<div class="gallery-two">
+  <img src="pasajes3.jpg">
+  <img src="pasajes4.jpg">
+  <img src="pasajes5.jpg">
+  <img src="pasajes6.jpg">
 </div>
 
 </main>
