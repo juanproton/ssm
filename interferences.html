@@ -14,7 +14,7 @@ body {
   background: white;
 }
 
-/* ─── NAV ────────────────────────────── */
+/* NAV */
 nav {
   position: fixed;
   top: 0;
@@ -46,7 +46,7 @@ nav a,
   cursor: pointer;
 }
 
-/* ─── DROPDOWN ───────────────────────── */
+/* DROPDOWN */
 .dropdown {
   position: relative;
 }
@@ -72,7 +72,7 @@ nav a,
   color: white;
 }
 
-/* ─── BREVO ──────────────────────────── */
+/* BREVO */
 .sib-form,
 #sib-form-container,
 #sib-container {
@@ -109,7 +109,7 @@ nav a,
   cursor: pointer;
 }
 
-/* ─── CONTENT ────────────────────────── */
+/* CONTENT */
 main {
   padding-top: 120px;
   width: calc(100% - 80px);
@@ -124,19 +124,24 @@ h1 {
 }
 
 .description {
-  max-width: 700px;
+  max-width: 720px;
   line-height: 1.5;
-  margin-bottom: 50px;
+  margin-bottom: 40px;
 }
 
-/* ─── TOKEN ──────────────────────────── */
+.description a {
+  color: black;
+  text-decoration: underline;
+}
+
+/* TOKEN */
 .token-wrap {
   width: 100%;
   max-width: 900px;
   margin: auto;
   aspect-ratio: 1 / 1;
   border: 1px solid #eee;
-  margin-bottom: 80px;
+  margin-bottom: 20px;
 }
 
 .token-wrap iframe {
@@ -144,6 +149,24 @@ h1 {
   height: 100%;
   border: none;
   display: block;
+}
+
+.controls {
+  margin-bottom: 80px;
+}
+
+.controls button {
+  background: black;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  cursor: pointer;
+  margin-right: 12px;
+}
+
+.meta {
+  display: inline-block;
+  font-size: 14px;
 }
 
 @media (max-width: 700px) {
@@ -214,17 +237,23 @@ action="https://2aca6431.sibforms.com/serve/MUIFALDayEnwa07abYbQcQh0sZNqq3MoE1hV
 <h1>INTERFERENCES</h1>
 
 <div class="description">
-A generative series exploring vibration, interference,
-layering and visual rhythm.
+A generative series exploring vibration, layering, rhythm and signal collision.
+Each visit loads a random live token directly from the generator.
 
-Live token embedded directly from the Art Blocks generator.
+<br><br>
+
+<a href="https://www.artblocks.io/collection/interferences-by-juan-pedro-vallejo" target="_blank">
+View project on Art Blocks
+</a>
 </div>
 
 <div class="token-wrap">
-<iframe
-src="https://generator.artblocks.io/1/0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270/354000221"
-allowfullscreen>
-</iframe>
+<iframe id="tokenFrame" allowfullscreen></iframe>
+</div>
+
+<div class="controls">
+<button onclick="loadRandomToken()">Load Another Output</button>
+<span class="meta" id="tokenLabel"></span>
 </div>
 
 </main>
@@ -247,6 +276,21 @@ document.addEventListener("click", (e) => {
     menu.style.display = "none"
   }
 })
+
+function loadRandomToken() {
+
+  const number = Math.floor(Math.random() * 257)
+  const tokenId = 354000000 + number
+
+  const url =
+    "https://generator.artblocks.io/1/0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270/" + tokenId
+
+  document.getElementById("tokenFrame").src = url
+  document.getElementById("tokenLabel").innerText =
+    "Interferences #" + number
+}
+
+loadRandomToken()
 </script>
 
 <script defer src="https://sibforms.com/forms/end-form/build/main.js"></script>
