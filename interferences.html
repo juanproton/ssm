@@ -10,11 +10,14 @@
 html,
 body {
   margin: 0;
-  height: 100%;
+  min-height: 100%;
   font-family: Helvetica, sans-serif;
   color: black;
   background: white;
-  overflow: hidden;
+}
+
+body {
+  overflow-x: hidden;
 }
 
 /* NAV */
@@ -114,14 +117,11 @@ nav a,
 
 /* CONTENT */
 main {
-  height: 100vh;
-  padding-top: 85px;
-  box-sizing: border-box;
+  padding-top: 95px;
+  padding-bottom: 50px;
   width: calc(100% - 40px);
   max-width: 1200px;
   margin: auto;
-  display: flex;
-  flex-direction: column;
 }
 
 h1 {
@@ -134,7 +134,7 @@ h1 {
   font-size: 14px;
   line-height: 1.45;
   max-width: 720px;
-  margin-bottom: 18px;
+  margin-bottom: 24px;
 }
 
 .description a {
@@ -144,10 +144,7 @@ h1 {
 
 /* SHOWCASE */
 .token-wrap {
-  flex: 1;
-  width: 100%;
-  max-width: calc(100vh - 230px);
-  max-height: calc(100vh - 230px);
+  width: min(78vh, 100%, 900px);
   aspect-ratio: 1 / 1;
   margin: 0 auto;
 }
@@ -162,7 +159,8 @@ h1 {
 /* CONTROLS */
 .controls {
   text-align: center;
-  padding: 14px 0 18px;
+  margin-top: 18px;
+  padding-bottom: 10px;
 }
 
 .controls button {
@@ -178,6 +176,7 @@ h1 {
   font-size: 14px;
 }
 
+/* MOBILE */
 @media (max-width: 700px) {
 
   nav {
@@ -186,7 +185,7 @@ h1 {
 
   main {
     width: calc(100% - 20px);
-    padding-top: 78px;
+    padding-top: 82px;
   }
 
   #sib-container input {
@@ -194,8 +193,7 @@ h1 {
   }
 
   .token-wrap {
-    max-width: calc(100vw - 20px);
-    max-height: calc(100vw - 20px);
+    width: 100%;
   }
 
   .description {
@@ -203,7 +201,12 @@ h1 {
   }
 
   .controls button {
-    margin-bottom: 10px;
+    display: block;
+    margin: 0 auto 10px auto;
+  }
+
+  .meta {
+    display: block;
   }
 }
 </style>
