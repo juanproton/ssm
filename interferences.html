@@ -14,7 +14,7 @@ body {
   background: white;
 }
 
-/* NAV */
+/* ─── NAV ────────────────────────────── */
 nav {
   position: fixed;
   top: 0;
@@ -46,7 +46,7 @@ nav a,
   cursor: pointer;
 }
 
-/* DROPDOWN */
+/* ─── DROPDOWN ───────────────────────── */
 .dropdown {
   position: relative;
 }
@@ -72,7 +72,7 @@ nav a,
   color: white;
 }
 
-/* BREVO */
+/* ─── BREVO ──────────────────────────── */
 .sib-form,
 #sib-form-container,
 #sib-container {
@@ -109,7 +109,7 @@ nav a,
   cursor: pointer;
 }
 
-/* CONTENT */
+/* ─── CONTENT ────────────────────────── */
 main {
   padding-top: 120px;
   width: calc(100% - 80px);
@@ -129,13 +129,14 @@ h1 {
   margin-bottom: 50px;
 }
 
-/* LIVE TOKEN */
+/* ─── TOKEN ──────────────────────────── */
 .token-wrap {
   width: 100%;
   max-width: 900px;
   margin: auto;
   aspect-ratio: 1 / 1;
-  margin-bottom: 30px;
+  border: 1px solid #eee;
+  margin-bottom: 80px;
 }
 
 .token-wrap iframe {
@@ -143,24 +144,6 @@ h1 {
   height: 100%;
   border: none;
   display: block;
-}
-
-.refresh {
-  margin-bottom: 80px;
-}
-
-.refresh button {
-  background: black;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  cursor: pointer;
-}
-
-.meta {
-  font-size: 14px;
-  color: #555;
-  margin-top: 10px;
 }
 
 @media (max-width: 700px) {
@@ -187,10 +170,10 @@ h1 {
 <a onclick="toggleMenu()">WORK</a>
 
 <div id="work-menu" class="dropdown-content">
-<a href="#">Artblocks</a>
-<a href="interferences.html">Interferences</a>
-<a href="pasajes.html">Pasajes</a>
-<a href="#">Explorations</a>
+  <a href="#">Artblocks</a>
+  <a href="interferences.html">Interferences</a>
+  <a href="pasajes.html">Pasajes</a>
+  <a href="#">Explorations</a>
 </div>
 
 </div>
@@ -231,20 +214,17 @@ action="https://2aca6431.sibforms.com/serve/MUIFALDayEnwa07abYbQcQh0sZNqq3MoE1hV
 <h1>INTERFERENCES</h1>
 
 <div class="description">
-A generative series exploring vibration, signal collision,
-layered rhythm and visual disturbance.
+A generative series exploring vibration, interference,
+layering and visual rhythm.
 
-Each visit loads a different live token directly from the
-Art Blocks generator.
+Live token embedded directly from the Art Blocks generator.
 </div>
 
 <div class="token-wrap">
-<iframe id="tokenFrame"></iframe>
-</div>
-
-<div class="refresh">
-<button onclick="loadRandomToken()">Load Another Output</button>
-<div class="meta" id="tokenId"></div>
+<iframe
+src="https://generator.artblocks.io/1/0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270/354000221"
+allowfullscreen>
+</iframe>
 </div>
 
 </main>
@@ -267,25 +247,6 @@ document.addEventListener("click", (e) => {
     menu.style.display = "none"
   }
 })
-
-function loadRandomToken() {
-
-  const min = 354000000
-  const max = 354000999
-
-  const token = Math.floor(
-    Math.random() * (max - min + 1)
-  ) + min
-
-  const url =
-  "https://generator.artblocks.io/1/0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270/" + token
-
-  document.getElementById("tokenFrame").src = url
-  document.getElementById("tokenId").innerText =
-    "Interferences #" + (token - 354000000)
-}
-
-loadRandomToken()
 </script>
 
 <script defer src="https://sibforms.com/forms/end-form/build/main.js"></script>
