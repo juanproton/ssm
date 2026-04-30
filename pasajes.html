@@ -1,1 +1,237 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Pasajes — Juan Pedro Vallejo</title>
+
+<link rel="stylesheet" href="https://sibforms.com/forms/end-form/build/sib-styles.css">
+
+<style>
+body {
+  margin: 0;
+  font-family: Helvetica, sans-serif;
+  color: black;
+  background: white;
+}
+
+/* ─── NAV ────────────────────────────── */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: white;
+  z-index: 100;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+}
+
+nav a,
+.brand {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* ─── DROPDOWN ───────────────────────── */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-content {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  background: white;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  min-width: 180px;
+}
+
+.dropdown-content a {
+  padding: 6px 8px;
+}
+
+.dropdown-content a:hover {
+  background: black;
+  color: white;
+}
+
+/* ─── BREVO ──────────────────────────── */
+.sib-form,
+#sib-form-container,
+#sib-container {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#sib-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+#sib-form > div {
+  padding: 0 !important;
+}
+
+#sib-container input {
+  width: 180px;
+  border: none;
+  border-bottom: 1px solid black;
+  background: transparent;
+  padding: 4px 0;
+}
+
+#sib-form button {
+  background: black !important;
+  color: white !important;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+/* ─── CONTENT ────────────────────────── */
+main {
+  padding-top: 120px;
+  width: calc(100% - 80px);
+  max-width: 1100px;
+  margin: auto;
+}
+
+h1 {
+  font-size: 32px;
+  font-weight: normal;
+  margin-bottom: 20px;
+}
+
+.description {
+  max-width: 700px;
+  line-height: 1.5;
+  margin-bottom: 60px;
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 30px;
+}
+
+.gallery img {
+  width: 100%;
+  display: block;
+}
+</style>
+</head>
+
+<body>
+
+<nav>
+
+<div class="nav-left">
+  <a href="index.html" class="brand">JUAN PEDRO VALLEJO</a>
+  <a href="index.html">INIT</a>
+
+  <div class="dropdown">
+    <a onclick="toggleMenu()">WORK</a>
+
+    <div id="work-menu" class="dropdown-content">
+      <a href="#">Artblocks</a>
+      <a href="#">Bright Moments</a>
+      <a href="#">Interferences</a>
+      <a href="#">Explorations</a>
+      <a href="pasajes.html">PASAJES</a>
+    </div>
+  </div>
+</div>
+
+<div class="nav-right">
+
+<div class="sib-form">
+<div id="sib-form-container">
+<div id="sib-container">
+
+<form
+id="sib-form"
+method="POST"
+action="https://2aca6431.sibforms.com/serve/MUIFALDayEnwa07abYbQcQh0sZNqq3MoE1hVtkLpDcRCFIN543RP7-94aG8Y3-wszQb6mXglL48Z6LiFFuXbkgYldHYnD33qyhfj8PpXXI0fV7Z7ylj3Y0_sAuAgof4dXXiUHXg9Dv0GQX6UU5q3ZEZ1v-u1fg1w2SzifRVp6WTq1iD8pLisKADOYLbHSmB0x4kLApDXnnMR0LPSwQ==">
+
+<div>
+<input type="email" name="EMAIL" placeholder="EMAIL" required>
+</div>
+
+<div>
+<button type="submit">Newsletter</button>
+</div>
+
+</form>
+
+</div>
+</div>
+</div>
+
+</div>
+
+</nav>
+
+<main>
+
+<h1>PASAJES</h1>
+
+<div class="description">
+Demo text. This body of work explores spatial transitions, thresholds,
+memory, perception and hidden architectures through image sequences.
+Replace this paragraph with your real project statement.
+</div>
+
+<div class="gallery">
+  <img src="images/pasajes1.jpg">
+  <img src="images/pasajes2.jpg">
+  <img src="images/pasajes3.jpg">
+</div>
+
+</main>
+
+<script>
+function toggleMenu() {
+  const menu = document.getElementById("work-menu")
+
+  menu.style.display =
+    menu.style.display === "flex"
+      ? "none"
+      : "flex"
+}
+
+document.addEventListener("click", (e) => {
+  const menu = document.getElementById("work-menu")
+  const dropdown = document.querySelector(".dropdown")
+
+  if (!dropdown.contains(e.target)) {
+    menu.style.display = "none"
+  }
+})
+</script>
+
+<script defer src="https://sibforms.com/forms/end-form/build/main.js"></script>
+
+</body>
+</html>
