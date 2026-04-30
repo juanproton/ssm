@@ -11,23 +11,38 @@ body {
   overflow: hidden;
 }
 
-/* ─── MENU ───────────────────────────── */
+/* ─── TOP BAR ────────────────────────── */
 nav {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   display: flex;
-  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
   padding: 20px;
   background: white;
   z-index: 10;
+}
+
+/* left side */
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* right side */
+.nav-right {
+  display: flex;
+  align-items: center;
 }
 
 nav a {
   text-decoration: none;
   color: black;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 /* ─── DROPDOWN ───────────────────────── */
@@ -63,51 +78,53 @@ nav a {
   position: absolute;
   width: 100%;
   height: 100%;
-  top: 0;
-  left: 0;
-}
-
-/* ─── FORM OVERLAY ───────────────────── */
-#subscribe-overlay {
-  position: absolute;
   inset: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 20;
 }
 
-/* ─── BREVO STYLE OVERRIDE ───────────── */
-.sib-form {
+/* ─── BREVO INLINE FORM ──────────────── */
+.sib-form,
+#sib-container,
+#sib-form-container {
   background: transparent !important;
-}
-
-#sib-container {
-  background-color: transparent !important;
   border: none !important;
   box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
-.sib-form {
-  background: transparent !important;
+#sib-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* input style */
+#sib-form > div {
+  padding: 0 !important;
+}
+
 #sib-container input {
   background: transparent;
   border: none;
   border-bottom: 1px solid black;
   color: black;
+  font-family: Helvetica, sans-serif;
+  font-size: 14px;
+  padding: 4px 0;
+  width: 180px;
 }
 
 #sib-container input::placeholder {
   color: rgba(0,0,0,0.5);
 }
 
-/* button */
-.sib-form-block__button {
+.sib-form-block__button,
+#sib-form button {
   background: black !important;
   color: white !important;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
 }
 </style>
 
@@ -117,51 +134,53 @@ nav a {
 <body>
 
 <nav>
+
+  <div class="nav-left">
     <span class="brand">JUAN PEDRO VALLEJO</span>
 
-  <a onclick="goTo(0)">INIT</a>
+    <a onclick="goTo(0)">INIT</a>
 
-  <div class="dropdown">
-    <a onclick="toggleMenu()">WORK</a>
-    <div id="work-menu" class="dropdown-content">
-      <a>Artblocks</a>
-      <a>Bright Moments</a>
-      <a>Interferences</a>
-      <a>Explorations</a>
+    <div class="dropdown">
+      <a onclick="toggleMenu()">WORK</a>
+
+      <div id="work-menu" class="dropdown-content">
+        <a>Artblocks</a>
+        <a>Bright Moments</a>
+        <a>Interferences</a>
+        <a>Explorations</a>
+      </div>
     </div>
   </div>
-</nav>
 
-<div class="section" id="init">
+  <div class="nav-right">
 
-  <div id="p5-container"></div>
-
-  <div id="subscribe-overlay">
-
-    <!-- BREVO FORM -->
     <div class="sib-form">
       <div id="sib-form-container">
-
         <div id="sib-container">
-          <form id="sib-form" method="POST"
-            action="https://2aca6431.sibforms.com/serve/MUIFALDayEnwa07abYbQcQh0sZNqq3MoE1hVtkLpDcRCFIN543RP7-94aG8Y3-wszQb6mXglL48Z6LiFFuXbkgYldHYnD33qyhfj8PpXXI0fV7Z7ylj3Y0_sAuAgof4dXXiUHXg9Dv0GQX6UU5q3ZEZ1v-u1fg1w2SzifRVp6WTq1iD8pLisKADOYLbHSmB0x4kLApDXnnMR0LPSwQ==">
 
-            <div style="padding: 10px">
+          <form id="sib-form" method="POST"
+          action="https://2aca6431.sibforms.com/serve/MUIFALDayEnwa07abYbQcQh0sZNqq3MoE1hVtkLpDcRCFIN543RP7-94aG8Y3-wszQb6mXglL48Z6LiFFuXbkgYldHYnD33qyhfj8PpXXI0fV7Z7ylj3Y0_sAuAgof4dXXiUHXg9Dv0GQX6UU5q3ZEZ1v-u1fg1w2SzifRVp6WTq1iD8pLisKADOYLbHSmB0x4kLApDXnnMR0LPSwQ==">
+
+            <div>
               <input type="text" name="EMAIL" placeholder="EMAIL" required />
             </div>
 
-            <div style="padding: 10px">
-              <button type="submit">Receive a Newsletter</button>
+            <div>
+              <button type="submit">Newsletter</button>
             </div>
 
           </form>
-        </div>
 
+        </div>
       </div>
     </div>
 
   </div>
 
+</nav>
+
+<div class="section" id="init">
+  <div id="p5-container"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
@@ -175,7 +194,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.toggleMenu = function() {
     const menu = document.getElementById("work-menu");
-    menu.style.display = (menu.style.display === "flex") ? "none" : "flex";
+    menu.style.display =
+      menu.style.display === "flex" ? "none" : "flex";
   }
 
   document.addEventListener("click", (e) => {
