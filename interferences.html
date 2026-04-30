@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Interferences — Juan Pedro Vallejo</title>
+
+<link rel="stylesheet" href="https://sibforms.com/forms/end-form/build/sib-styles.css">
+
+<style>
+body {
+  margin: 0;
+  font-family: Helvetica, sans-serif;
+  color: black;
+  background: white;
+}
+
+/* NAV */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  z-index: 100;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+}
+
+nav a,
+.brand {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* DROPDOWN */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-content {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  background: white;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  min-width: 200px;
+}
+
+.dropdown-content a {
+  padding: 6px 8px;
+}
+
+.dropdown-content a:hover {
+  background: black;
+  color: white;
+}
+
+/* BREVO */
+.sib-form,
+#sib-form-container,
+#sib-container {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#sib-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+#sib-form > div {
+  padding: 0 !important;
+}
+
+#sib-container input {
+  width: 180px;
+  border: none;
+  border-bottom: 1px solid black;
+  background: transparent;
+  padding: 4px 0;
+}
+
+#sib-form button {
+  background: black !important;
+  color: white !important;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+/* CONTENT */
+main {
+  padding-top: 120px;
+  width: calc(100% - 80px);
+  max-width: 1100px;
+  margin: auto;
+}
+
+h1 {
+  font-size: 32px;
+  font-weight: normal;
+  margin-bottom: 20px;
+}
+
+.description {
+  max-width: 700px;
+  line-height: 1.5;
+  margin-bottom: 50px;
+}
+
+/* LIVE TOKEN */
+.token-wrap {
+  width: 100%;
+  max-width: 900px;
+  margin: auto;
+  aspect-ratio: 1 / 1;
+  margin-bottom: 30px;
+}
+
+.token-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.refresh {
+  margin-bottom: 80px;
+}
+
+.refresh button {
+  background: black;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.meta {
+  font-size: 14px;
+  color: #555;
+  margin-top: 10px;
+}
+
+@media (max-width: 700px) {
+  main {
+    width: calc(100% - 30px);
+  }
+
+  #sib-container input {
+    width: 120px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<nav>
+
+<div class="nav-left">
+
+<a href="index.html" class="brand">JUAN PEDRO VALLEJO</a>
+
+<div class="dropdown">
+<a onclick="toggleMenu()">WORK</a>
+
+<div id="work-menu" class="dropdown-content">
+<a href="#">Artblocks</a>
+<a href="interferences.html">Interferences</a>
+<a href="pasajes.html">Pasajes</a>
+<a href="#">Explorations</a>
+</div>
+
+</div>
+
+</div>
+
+<div class="nav-right">
+
+<div class="sib-form">
+<div id="sib-form-container">
+<div id="sib-container">
+
+<form
+id="sib-form"
+method="POST"
+action="https://2aca6431.sibforms.com/serve/MUIFALDayEnwa07abYbQcQh0sZNqq3MoE1hVtkLpDcRCFIN543RP7-94aG8Y3-wszQb6mXglL48Z6LiFFuXbkgYldHYnD33qyhfj8PpXXI0fV7Z7ylj3Y0_sAuAgof4dXXiUHXg9Dv0GQX6UU5q3ZEZ1v-u1fg1w2SzifRVp6WTq1iD8pLisKADOYLbHSmB0x4kLApDXnnMR0LPSwQ==">
+
+<div>
+<input type="email" name="EMAIL" placeholder="EMAIL" required>
+</div>
+
+<div>
+<button type="submit">Newsletter</button>
+</div>
+
+</form>
+
+</div>
+</div>
+</div>
+
+</div>
+
+</nav>
+
+<main>
+
+<h1>INTERFERENCES</h1>
+
+<div class="description">
+A generative series exploring vibration, signal collision,
+layered rhythm and visual disturbance.
+
+Each visit loads a different live token directly from the
+Art Blocks generator.
+</div>
+
+<div class="token-wrap">
+<iframe id="tokenFrame"></iframe>
+</div>
+
+<div class="refresh">
+<button onclick="loadRandomToken()">Load Another Output</button>
+<div class="meta" id="tokenId"></div>
+</div>
+
+</main>
+
+<script>
+function toggleMenu() {
+  const menu = document.getElementById("work-menu")
+
+  menu.style.display =
+    menu.style.display === "flex"
+      ? "none"
+      : "flex"
+}
+
+document.addEventListener("click", (e) => {
+  const menu = document.getElementById("work-menu")
+  const dropdown = document.querySelector(".dropdown")
+
+  if (!dropdown.contains(e.target)) {
+    menu.style.display = "none"
+  }
+})
+
+function loadRandomToken() {
+
+  const min = 354000000
+  const max = 354000999
+
+  const token = Math.floor(
+    Math.random() * (max - min + 1)
+  ) + min
+
+  const url =
+  "https://generator.artblocks.io/1/0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270/" + token
+
+  document.getElementById("tokenFrame").src = url
+  document.getElementById("tokenId").innerText =
+    "Interferences #" + (token - 354000000)
+}
+
+loadRandomToken()
+</script>
+
+<script defer src="https://sibforms.com/forms/end-form/build/main.js"></script>
+
+</body>
+</html>
