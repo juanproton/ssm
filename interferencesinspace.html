@@ -1,1 +1,231 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Interferences in Space — Juan Pedro Vallejo</title>
+
+<link rel="stylesheet" href="https://sibforms.com/forms/end-form/build/sib-styles.css">
+
+<style>
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: Helvetica, sans-serif;
+  color: black;
+  background: white;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* NAV */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  z-index: 100;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+}
+
+nav a,
+.brand {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* DROPDOWN */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-content {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  background: white;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  min-width: 220px;
+}
+
+.dropdown-content a {
+  padding: 6px 8px;
+  color: black;
+  text-decoration: none;
+}
+
+.dropdown-content a:hover {
+  background: black;
+  color: white;
+}
+
+/* BREVO */
+.sib-form,
+#sib-form-container,
+#sib-container {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#sib-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+#sib-form > div {
+  padding: 0 !important;
+}
+
+#sib-container input {
+  width: 180px;
+  border: none;
+  border-bottom: 1px solid black;
+  background: transparent;
+  padding: 4px 0;
+}
+
+#sib-form button {
+  background: black !important;
+  color: white !important;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+/* CONTENT */
+main {
+  padding-top: 110px;
+  padding-bottom: 50px;
+  width: calc(100% - 40px);
+  max-width: 1100px;
+  margin: auto;
+}
+
+h1 {
+  font-size: 32px;
+  font-weight: normal;
+  margin: 0 0 18px 0;
+}
+
+.description {
+  max-width: 760px;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 35px;
+}
+
+/* VIDEO */
+.video-wrap {
+  width: 100%;
+  max-width: 1000px;
+  margin: auto;
+}
+
+.video-wrap video {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* MOBILE */
+@media (max-width: 700px) {
+
+  nav {
+    padding: 15px;
+  }
+
+  main {
+    width: calc(100% - 20px);
+    padding-top: 85px;
+  }
+
+  #sib-container input {
+    width: 110px;
+  }
+
+  .description {
+    font-size: 13px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div id="header"></div>
+
+<main>
+
+<h1>INTERFERENCES IN SPACE</h1>
+
+<div class="description">
+An audiovisual extension of the Interferences series, where structure dissolves into motion and luminous fragments drift through an unstable field. Signals fold into one another, forming temporary alignments before dispersing again. What appears mechanical becomes atmospheric; what seems distant becomes intimate.
+
+The piece explores rhythm, void, repetition and spatial vibration through moving image.
+</div>
+
+<div class="video-wrap">
+<video controls autoplay muted loop playsinline>
+<source src="interferencesinspace.mov" type="video/mp4">
+Your browser does not support the video tag.
+</video>
+</div>
+
+</main>
+
+<script>
+fetch("header.html")
+.then(response => response.text())
+.then(data => {
+  document.getElementById("header").innerHTML = data
+
+  window.toggleMenu = function() {
+    const menu = document.getElementById("work-menu")
+
+    menu.style.display =
+      menu.style.display === "flex"
+      ? "none"
+      : "flex"
+  }
+
+  document.addEventListener("click", (e) => {
+    const dropdown = document.querySelector(".dropdown")
+    const menu = document.getElementById("work-menu")
+
+    if (dropdown && !dropdown.contains(e.target)) {
+      menu.style.display = "none"
+    }
+  })
+})
+</script>
+
+<script defer src="https://sibforms.com/forms/end-form/build/main.js"></script>
+
+</body>
+</html>
