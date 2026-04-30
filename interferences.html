@@ -7,11 +7,14 @@
 <link rel="stylesheet" href="https://sibforms.com/forms/end-form/build/sib-styles.css">
 
 <style>
+html,
 body {
   margin: 0;
+  height: 100%;
   font-family: Helvetica, sans-serif;
   color: black;
   background: white;
+  overflow: hidden;
 }
 
 /* NAV */
@@ -111,22 +114,27 @@ nav a,
 
 /* CONTENT */
 main {
-  padding-top: 120px;
-  width: calc(100% - 80px);
-  max-width: 1100px;
+  height: 100vh;
+  padding-top: 85px;
+  box-sizing: border-box;
+  width: calc(100% - 40px);
+  max-width: 1200px;
   margin: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 h1 {
-  font-size: 32px;
+  font-size: 30px;
   font-weight: normal;
-  margin-bottom: 20px;
+  margin: 0 0 12px 0;
 }
 
 .description {
+  font-size: 14px;
+  line-height: 1.45;
   max-width: 720px;
-  line-height: 1.5;
-  margin-bottom: 40px;
+  margin-bottom: 18px;
 }
 
 .description a {
@@ -134,14 +142,14 @@ h1 {
   text-decoration: underline;
 }
 
-/* TOKEN */
+/* SHOWCASE */
 .token-wrap {
+  flex: 1;
   width: 100%;
-  max-width: 900px;
-  margin: auto;
+  max-width: calc(100vh - 230px);
+  max-height: calc(100vh - 230px);
   aspect-ratio: 1 / 1;
-  border: 1px solid #eee;
-  margin-bottom: 20px;
+  margin: 0 auto;
 }
 
 .token-wrap iframe {
@@ -151,8 +159,10 @@ h1 {
   display: block;
 }
 
+/* CONTROLS */
 .controls {
-  margin-bottom: 80px;
+  text-align: center;
+  padding: 14px 0 18px;
 }
 
 .controls button {
@@ -165,17 +175,35 @@ h1 {
 }
 
 .meta {
-  display: inline-block;
   font-size: 14px;
 }
 
 @media (max-width: 700px) {
+
+  nav {
+    padding: 15px;
+  }
+
   main {
-    width: calc(100% - 30px);
+    width: calc(100% - 20px);
+    padding-top: 78px;
   }
 
   #sib-container input {
-    width: 120px;
+    width: 110px;
+  }
+
+  .token-wrap {
+    max-width: calc(100vw - 20px);
+    max-height: calc(100vw - 20px);
+  }
+
+  .description {
+    font-size: 13px;
+  }
+
+  .controls button {
+    margin-bottom: 10px;
   }
 }
 </style>
@@ -186,21 +214,18 @@ h1 {
 <nav>
 
 <div class="nav-left">
-
 <a href="index.html" class="brand">JUAN PEDRO VALLEJO</a>
 
 <div class="dropdown">
 <a onclick="toggleMenu()">WORK</a>
 
 <div id="work-menu" class="dropdown-content">
-  <a href="#">Artblocks</a>
-  <a href="interferences.html">Interferences</a>
-  <a href="pasajes.html">Pasajes</a>
-  <a href="#">Explorations</a>
+<a href="#">Artblocks</a>
+<a href="interferences.html">Interferences</a>
+<a href="pasajes.html">Pasajes</a>
+<a href="#">Explorations</a>
 </div>
-
 </div>
-
 </div>
 
 <div class="nav-right">
@@ -261,11 +286,8 @@ View project on Art Blocks
 <script>
 function toggleMenu() {
   const menu = document.getElementById("work-menu")
-
   menu.style.display =
-    menu.style.display === "flex"
-      ? "none"
-      : "flex"
+    menu.style.display === "flex" ? "none" : "flex"
 }
 
 document.addEventListener("click", (e) => {
@@ -278,14 +300,12 @@ document.addEventListener("click", (e) => {
 })
 
 function loadRandomToken() {
-
   const number = Math.floor(Math.random() * 257)
   const tokenId = 354000000 + number
 
-  const url =
+  document.getElementById("tokenFrame").src =
     "https://generator.artblocks.io/1/0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270/" + tokenId
 
-  document.getElementById("tokenFrame").src = url
   document.getElementById("tokenLabel").innerText =
     "Interferences #" + number
 }
