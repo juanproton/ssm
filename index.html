@@ -13,7 +13,7 @@ body {
   overflow: hidden;
 }
 
-/* ─── TOP BAR ────────────────────────── */
+/* TOP BAR */
 nav {
   position: fixed;
   top: 0;
@@ -46,7 +46,7 @@ nav a,
   white-space: nowrap;
 }
 
-/* ─── DROPDOWN ───────────────────────── */
+/* DROPDOWN */
 .dropdown {
   position: relative;
 }
@@ -76,7 +76,7 @@ nav a,
   color: white;
 }
 
-/* ─── SECTION ────────────────────────── */
+/* SECTION */
 .section {
   width: 100vw;
   height: 100vh;
@@ -87,13 +87,13 @@ nav a,
   background: #e3e3ff;
 }
 
-/* ─── P5 ─────────────────────────────── */
+/* P5 */
 #p5-container {
   position: absolute;
   inset: 0;
 }
 
-/* ─── BREVO ──────────────────────────── */
+/* BREVO */
 .sib-form,
 #sib-form-container,
 #sib-container {
@@ -145,7 +145,7 @@ nav a,
 <div id="header"></div>
 
 <div class="section" id="init">
-  <div id="p5-container"></div>
+<div id="p5-container"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
@@ -153,28 +153,32 @@ nav a,
 <script src="sketch.js"></script>
 
 <script>
-fetch("header.html")
-.then(response => response.text())
-.then(data => {
-  document.getElementById("header").innerHTML = data
+document.addEventListener("DOMContentLoaded", () => {
 
-  window.toggleMenu = function() {
-    const menu = document.getElementById("work-menu")
+  fetch("./header.html?" + Date.now())
+  .then(response => response.text())
+  .then(data => {
+    document.getElementById("header").innerHTML = data
 
-    menu.style.display =
-      menu.style.display === "flex"
-      ? "none"
-      : "flex"
-  }
+    window.toggleMenu = function() {
+      const menu = document.getElementById("work-menu")
 
-  document.addEventListener("click", (e) => {
-    const dropdown = document.querySelector(".dropdown")
-    const menu = document.getElementById("work-menu")
-
-    if (dropdown && !dropdown.contains(e.target)) {
-      menu.style.display = "none"
+      menu.style.display =
+        menu.style.display === "flex"
+        ? "none"
+        : "flex"
     }
+
+    document.addEventListener("click", (e) => {
+      const dropdown = document.querySelector(".dropdown")
+      const menu = document.getElementById("work-menu")
+
+      if (dropdown && !dropdown.contains(e.target)) {
+        menu.style.display = "none"
+      }
+    })
   })
+
 })
 </script>
 
