@@ -14,104 +14,6 @@ body {
   background: white;
 }
 
-/* NAV */
-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  padding: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: white;
-  z-index: 100;
-}
-
-.nav-left {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.nav-right {
-  display: flex;
-  align-items: center;
-}
-
-nav a,
-.brand {
-  color: black;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-/* DROPDOWN */
-.dropdown {
-  position: relative;
-}
-
-.dropdown-content {
-  position: absolute;
-  top: 40px;
-  left: 0;
-  background: white;
-  display: none;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px;
-  min-width: 220px;
-  z-index: 30;
-}
-
-.dropdown-content a {
-  color: black;
-  text-decoration: none;
-  padding: 6px 8px;
-}
-
-.dropdown-content a:hover {
-  background: black;
-  color: white;
-}
-
-/* BREVO */
-.sib-form,
-#sib-form-container,
-#sib-container {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-#sib-form {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-#sib-form > div {
-  padding: 0 !important;
-}
-
-#sib-container input {
-  width: 180px;
-  border: none;
-  border-bottom: 1px solid black;
-  background: transparent;
-  padding: 4px 0;
-}
-
-#sib-form button {
-  background: black !important;
-  color: white !important;
-  border: none;
-  padding: 6px 12px;
-  cursor: pointer;
-}
-
 /* CONTENT */
 main {
   padding-top: 120px;
@@ -132,25 +34,17 @@ h1 {
   margin-bottom: 40px;
 }
 
-/* PDF VIEW */
-.pdf-view {
+/* PDF RENDER */
+#pdf-container canvas {
   width: 100%;
-  height: 80vh;
-  border: none;
+  display: block;
+  margin-bottom: 40px;
 }
 
 /* MOBILE */
 @media (max-width: 800px) {
   main {
     width: calc(100% - 30px);
-  }
-
-  #sib-container input {
-    width: 110px;
-  }
-
-  .pdf-view {
-    height: 70vh;
   }
 }
 </style>
@@ -165,22 +59,22 @@ h1 {
 <h1>EXPANDED INTERFERENCES</h1>
 
 <div class="description">
-A spatial and material extension of the Interferences series
+A spatial and material extension of the Interferences series.
 
 This body of work explores continuity, fragmentation, and the translation of generative systems into physical formats.
 </div>
 
-<!-- PDF EMBED -->
-<iframe
-class="pdf-view"
-src="/INTERFERENCES2.pdf">
-</iframe>
+<div id="pdf-container"></div>
 
 </main>
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
+  /* LOAD HEADER */
   fetch("./header.html?" + Date.now())
   .then(response => response.text())
   .then(data => {
@@ -203,6 +97,40 @@ document.addEventListener("DOMContentLoaded", () => {
         menu.style.display = "none"
       }
     })
+  })
+
+  /* PDF RENDER */
+  const url = "INTERFERENCES2.pdf"
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"
+
+  const container = document.getElementById("pdf-container")
+
+  pdfjsLib.getDocument(url).promise.then(pdf => {
+
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+
+      pdf.getPage(pageNumber).then(page => {
+
+        const scale = 1.6
+        const viewport = page.getViewport({ scale })
+
+        const canvas = document.createElement("canvas")
+        const context = canvas.getContext("2d")
+
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+
+        container.appendChild(canvas)
+
+        page.render({
+          canvasContext: context,
+          viewport: viewport
+        })
+      })
+    }
+
   })
 
 })
