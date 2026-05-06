@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Parabolas — Juan Pedro Vallejo</title>
+
+<link rel="stylesheet" href="https://sibforms.com/forms/end-form/build/sib-styles.css">
+
+<style>
+body {
+  margin: 0;
+  font-family: Helvetica, sans-serif;
+  color: black;
+  background: white;
+}
+
+/* NAV */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: white;
+  z-index: 100;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+}
+
+nav a,
+.brand {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* DROPDOWN */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-content {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  background: white;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  min-width: 220px;
+  z-index: 30;
+}
+
+.dropdown-content a {
+  color: black;
+  text-decoration: none;
+  padding: 6px 8px;
+}
+
+.dropdown-content a:hover {
+  background: black;
+  color: white;
+}
+
+/* BREVO */
+.sib-form,
+#sib-form-container,
+#sib-container {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#sib-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+#sib-form > div {
+  padding: 0 !important;
+}
+
+#sib-container input {
+  width: 180px;
+  border: none;
+  border-bottom: 1px solid black;
+  background: transparent;
+  padding: 4px 0;
+}
+
+#sib-form button {
+  background: black !important;
+  color: white !important;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+/* CONTENT */
+main {
+  padding-top: 120px;
+  width: calc(100% - 80px);
+  max-width: 1100px;
+  margin: auto;
+}
+
+h1 {
+  font-size: 32px;
+  font-weight: normal;
+  margin-bottom: 20px;
+}
+
+.description {
+  max-width: 700px;
+  line-height: 1.5;
+  margin-bottom: 60px;
+}
+
+/* ONE COLUMN */
+.gallery {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 30px;
+  margin-bottom: 60px;
+}
+
+.gallery img {
+  width: 100%;
+  display: block;
+}
+
+/* TWO COLUMN */
+.gallery-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-bottom: 80px;
+}
+
+.gallery-two img {
+  width: 100%;
+  display: block;
+}
+
+@media (max-width: 800px) {
+
+  .gallery-two {
+    grid-template-columns: 1fr;
+  }
+
+  main {
+    width: calc(100% - 30px);
+  }
+
+  #sib-container input {
+    width: 110px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div id="header"></div>
+
+<main>
+
+<h1>PARABOLAS</h1>
+
+<div class="description">
+Pen Plotter serie 
+
+</div>
+
+<div class="gallery">
+  <img src="canvas - 2026-02-19T215838.159.svg">
+  <img src="canvas - 2026-02-20T215518.646.svg">
+    <img src="canvas - 2026-02-20T215605.746.svg">
+    <img src="canvas - 2026-02-20T215629.771.svg">
+
+      <img src="canvas - 2026-02-20T215649.906.svg">
+
+      <img src="canvas - 2026-02-20T220742.400.svg">
+    <img src="canvas - 2026-02-20T230727.823.svg">
+      <img src="canvas - 2026-02-21T153917.161.svg">
+
+
+</div>
+
+<div class="gallery-two">
+  <img src="canvas - 2026-02-19T215804.031.svg">
+  <img src="canvas - 2026-02-21T153846.943.svg">
+
+</div>
+
+</main>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  fetch("./header.html?" + Date.now())
+  .then(response => response.text())
+  .then(data => {
+    document.getElementById("header").innerHTML = data
+
+    window.toggleMenu = function() {
+      const menu = document.getElementById("work-menu")
+
+      menu.style.display =
+        menu.style.display === "flex"
+        ? "none"
+        : "flex"
+    }
+
+    document.addEventListener("click", (e) => {
+      const dropdown = document.querySelector(".dropdown")
+      const menu = document.getElementById("work-menu")
+
+      if (dropdown && !dropdown.contains(e.target)) {
+        menu.style.display = "none"
+      }
+    })
+  })
+
+})
+</script>
+
+<script defer src="https://sibforms.com/forms/end-form/build/main.js"></script>
+
+</body>
+</html>
