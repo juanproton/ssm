@@ -156,8 +156,8 @@ function setup() {
   let freq = random([12.5,24.5])
   for (let i = 0; i < numParticles; i++) {
     let pObj = {
-      ox: random(-0.8, 0.8),
-      oy: random(-0.8, 0.8),
+      ox: random(-1, 1),
+      oy: random(-1, 1),
       s: random(0.5, 0.5),
       vx: random(-0.1, 0.1),
       vy: random(-0.1, 0.1),
