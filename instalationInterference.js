@@ -1,27 +1,42 @@
 // =====================================================================================================
-//  PARTICLES · SHADER SKETCH
+//  INTERFERENCES · SHADER SKETCH
 //
-//   0.  GENERAL
-//   1.  CAMERA AND PARTICLE MOTION
-//   2.  STATES AND TRACKS: how they are chosen and timed
+//  Every particle is an INTERFERENCE. An interference has three groups of properties:
 //
-//   GROUP A · MOTION STATES  (own track: they run one at a time, with their own rests)
-//   3.  ROTATION
-//   4.  VELOCITY
-//   5.  APERTURE             (own value -> 0 or max -> back)
-//   6.  APERTURE SWING       (own value -> +max -> -max -> back)
+//      SHAPE       what it is drawn as            cuts (rows) · aperture
+//      SKINS       how it is painted              frequency · rgb shift · sum (the double) · run
+//      TRANSFORM   where it is and how it moves   position (drift, velocity, camera) · rotation
 //
-//   GROUP B · SKIN STATES    (another track, independent from the motion one, with its own rests)
-//   7.  FREQUENCY
-//   8.  SUM                  (second pulse interference, final + final2)
-//   9.  RGB SHIFT            (chromatic aberration)
+//  The properties change over time through STATES (a state moves one property away from its normal value,
+//  holds it, and comes back) and through a few VARIANTS. Everything about one property -- its parameters,
+//  its live values and the states that act on it -- is together in the same block.
 //
-//  10.  TRACKS REGISTRY
-//  11.  VARIANTS (not states):  RUN (rings flow)  ·  ZONE (a random screen segment wakes up)
-//  12.  SHADERS
-//  13.  SETUP
-//  14.  UPDATE
-//  15.  DRAW
+//  The console prints ALL the parameters of the current state: press P, and every time a state starts
+//  or ends (see section 9, CONSOLE REPORT, to change it).
+//
+//   INDEX
+//    0.  GENERAL
+//    M.  STATE MACHINERY      patterns · Cycle · Track  (shared tools, and the two timelines)
+//
+//    1.  SHAPE
+//         1.1  CUTS             rows of the pattern, and the frequency they ask for
+//         1.2  APERTURE         max aperture, its cap by cuts · states: aperture, aperture swing
+//    2.  SKINS
+//         2.1  FREQUENCY        state: frequency
+//         2.2  RGB SHIFT        state: chroma
+//         2.3  SUM              state: sum  (final + final2, "the double")
+//         2.4  RUN              variant: the rings flow
+//    3.  TRANSFORM
+//         3.1  POSITION         camera, drift  · state: velocity
+//         3.2  ROTATION         state: rotation
+//         3.3  ZONE             variant: a screen segment wakes up (moves / rotates)
+//
+//    4.  TRACKS REGISTRY    which states run in which timeline
+//    5.  SHADERS
+//    6.  SETUP
+//    7.  UPDATE
+//    8.  DRAW
+//    9.  CONSOLE REPORT
 // =====================================================================================================
 
 
@@ -30,52 +45,37 @@
 // =====================================================================================================
 let shaderProgram;
 let postShader;            // pass 2: pixelation rectangles
-let pass1;                 // offscreen buffer where the particles are drawn
+let pass1;                 // offscreen buffer where the interferences are drawn
 let vertCount;
 let DIM = Math.max(window.innerWidth, window.innerHeight);
 
-const numParticles = 1000; // fewer = sparser field
+const numInterferences = 1000; // fewer = sparser field
 
-// pixelation rectangles (live in world space, like the particles)
+// pixelation rectangles (live in world space, like the interferences)
 const NUM_RECTS = 1;
 const PIXEL_SIZE = 8;      // size of the "big pixels" inside the rectangles (screen px)
 let rects = [];
 
 
 // =====================================================================================================
-//  1. CAMERA AND PARTICLE MOTION
-// =====================================================================================================
-let camPos = [0, 0];
-let camVel = [0.0001, 0];  // camera speed per frame: [x, y]. Positive x = camera moves right
-const HALF = 1.3;          // world is a loop of width 2*HALF around the camera (always off-screen at the edge)
-const WRAP = HALF * 2;
-const CULL_LIM = 1.22;     // beyond this (screen space) a particle isn't drawn
-
-// own motion of every particle (a random direction that slowly wanders)
-const DRIFT_MIN = 0.0002;          // every particle picks its own speed between MIN and MAX
-const DRIFT_MAX = 0.0012;
-const DRIFT_BREATH = 0.6;          // 0 = constant speed. 0.6 = the speed slowly swings between 40% and 160%
-const DRIFT_BREATH_RATE = [0.1, 0.5]; // rad/s of that swing (every particle picks its own)
-const WANDER = 0.03;               // max random turn per frame (radians). 0 = straight lines
-
-
-// =====================================================================================================
-//  2. STATES AND TRACKS
-//     The states are split in two groups. Each group is a TRACK that works on its own:
-//     it picks a random state, the state does its whole trip (go -> hold -> come back), the track rests
-//     for a while, and picks the next one. The two tracks do NOT wait for each other, and each one has
-//     its own durations, so motion changes and skin changes overlap in different ways every time.
+//  M. STATE MACHINERY
+//     The states run in two independent TRACKS (timelines):
+//        MOTION track   the states of the SHAPE and TRANSFORM groups: aperture, aperture swing, rotation, velocity
+//        SKINS  track   the states of the SKINS group: frequency, sum, rgb shift
+//     Each track picks a random state, the state does its whole trip (go -> hold -> come back), the track
+//     rests for a while, and picks the next one. The two tracks do NOT wait for each other, and each one has
+//     its own durations, so the changes overlap in different ways every time.
 // =====================================================================================================
 const MOTION_TRACK = {
-  timeScale: 1.5,          // multiplies every duration of the motion states. Higher = slower changes
+  timeScale: 1.,          // multiplies every duration of the motion states. Higher = slower changes
   rest: [12, 30],          // seconds of rest between two motion states (x timeScale)
-  maxRepeat: 2,            // the same state never runs more than this many times in a row
+  maxRepeat: 1,            // the same state never runs more than this many times in a row
   startWith: {},           // chance (0..1) of STARTING the program already inside a state, e.g. { aperture: 0.2 }
 };
 const SKINS_TRACK = {
   timeScale: 1.5,
   rest: [9, 24],           // different from the motion rests, so the two tracks drift apart
-  maxRepeat: 2,
+  maxRepeat: 1,
   // When the program starts, with these chances it is ALREADY in that state (fully on, in its "hold"
   // phase) and then it eases back to normal. The rest of the chances (here 40%) start in the normal look.
   startWith: { sum: 0.3, chroma: 0.3 },
@@ -83,12 +83,14 @@ const SKINS_TRACK = {
   onStateEnd:   () => runOnStateEnd(),
 };
 
-// Every transition picks a random PATTERN: the ORDER in which the particles change
+// Every transition picks a random PATTERN: the ORDER in which the interferences change
 //   0 left>right   1 right>left   2 top>bottom   3 bottom>top
 //   4 TL>BR   5 BR>TL   6 BL>TR   7 TR>BL (diagonals)
 //   8 center>edges   9 edges>center   10 random   11 clockwise sweep   12 all at once
 const PATTERN_COUNT = 13;
-const STAGGER_MIN = 0.4;   // how much of a smooth transition is used to delay the particles (0 = no delay)
+const PATTERN_NAMES = ['left>right', 'right>left', 'top>bottom', 'bottom>top', 'TL>BR', 'BR>TL', 'BL>TR', 'TR>BL',
+                       'center>edges', 'edges>center', 'random', 'clockwise', 'all at once'];
+const STAGGER_MIN = 0.4;   // how much of a smooth transition is used to delay the interferences (0 = no delay)
 const STAGGER_MAX = 0.8;
 
 function ease(t) {
@@ -97,13 +99,16 @@ function ease(t) {
 }
 
 // A list of phases that runs once. Each phase lasts a random time inside its [min, max] range
-// (x the timeScale of its track). apply(k) gets the (linear) progress k 0..1 of the phase.
+// (x the timeScale of its track, / the speed of this run). apply(k) gets the (linear) progress k 0..1.
 class Cycle {
   constructor(phases) {
     this.phases = phases;
-    this.scale = 1;
+    this.scale = 1;        // set by the track (its timeScale)
+    this.speed = 1;        // a state can change it at its start (> 1 = faster transitions)
     this.i = 0; this.t = 0; this.dur = 1;
   }
+  get phaseName() { return this.phases[this.i].name || ('phase ' + this.i); }
+  get progress() { return min(this.t / this.dur, 1); }
   start() { this.begin(0); }
   // starts directly inside phase i (the onStart of the earlier phases still runs, to prepare their random values)
   startAt(i) {
@@ -114,8 +119,8 @@ class Cycle {
     this.i = i;
     this.t = 0;
     const ph = this.phases[i];
-    this.dur = random(ph.range[0], ph.range[1]) * this.scale;
-    if (ph.onStart) ph.onStart();
+    if (ph.onStart) ph.onStart();      // (before the duration: onStart may change this.speed)
+    this.dur = random(ph.range[0], ph.range[1]) * this.scale / this.speed;
   }
   // returns true when the last phase is over
   update(dt) {
@@ -131,7 +136,8 @@ class Cycle {
 }
 
 // A group of states that run one at a time.
-// every state is { name, make: () => Cycle, idle: () => void, uniforms: (shader) => void }
+// every state is { name, group, make: () => Cycle, idle: () => void, uniforms: (shader) => void,
+//                  report: () => object, weight?, start? }
 class Track {
   constructor(name, cfg, states) {
     this.name = name;
@@ -171,7 +177,27 @@ class Track {
     if (n >= m && this.hist.slice(-m).every(v => v === this.hist[n - 1])) {
       options = options.filter(i => i !== this.hist[n - 1]);
     }
-    return random(options);
+    // states can have a `weight` (default 1): the higher, the more often it is picked
+    const weights = options.map(i => this.states[i].weight || 1);
+    let r = random(weights.reduce((a, b) => a + b, 0));
+    for (let j = 0; j < options.length; j++) {
+      r -= weights[j];
+      if (r <= 0) return options[j];
+    }
+    return options[options.length - 1];
+  }
+  // what this track is doing (used by the console report)
+  status() {
+    const st = this.current >= 0 ? this.states[this.current] : null;
+    const out = {
+      state: st ? st.name + ' (' + st.group + ')' : 'resting',
+      phase: st ? st.cycle.phaseName : '-',
+      phase_progress: st ? r3(st.cycle.progress) : 0,
+      rest_left_s: st ? 0 : r3(Math.max(this.rest, 0)),
+      last_states: this.hist.map(i => this.states[i].name).join(' > ') || '-',
+    };
+    if (st && st.report) out.state_params = st.report();
+    return out;
   }
   update(dt) {
     this.states.forEach(st => st.idle());     // everything at its normal value...
@@ -181,17 +207,20 @@ class Track {
         this.current = this.pick();
         this.states[this.current].cycle.start();
         if (this.cfg.onStateStart) this.cfg.onStateStart();
+        if (LOG.onChange) logState(this.name + ' track: "' + this.states[this.current].name + '" STARTS');
       }
     } else {
       // ...except the state that is running now, which overrides its own values
       const finished = this.states[this.current].cycle.update(dt);
       if (finished) {
+        const name = this.states[this.current].name;
         this.hist.push(this.current);
         if (this.hist.length > this.cfg.maxRepeat) this.hist.shift();
         this.current = -1;
         this.rest = random(this.cfg.rest[0], this.cfg.rest[1]) * this.cfg.timeScale;
         if (this.cfg.onStateEnd) this.cfg.onStateEnd();
         this.states.forEach(st => st.idle());
+        if (LOG.onChange) logState(this.name + ' track: "' + name + '" ENDS');
       }
     }
   }
@@ -201,6 +230,11 @@ class Track {
 function setPattern(st) {
   st.pat = floor(random(PATTERN_COUNT));
   if ('st' in st) st.st = st.pat === 12 ? 0 : random(STAGGER_MIN, STAGGER_MAX);
+}
+
+// pattern and stagger of a state, for the console report
+function patInfo(s) {
+  return { pattern: PATTERN_NAMES[s.pat], stagger: r3('st' in s ? s.st : 0) };
 }
 
 // sends the usual group of values of a state to the shader: u_<pre>K / From / To / Pat / St
@@ -239,18 +273,430 @@ function localProgJS(k, o, st) {
 
 
 // #####################################################################################################
-// #####################################   GROUP A · MOTION STATES   ###################################
+// ##########################################   1 · SHAPE   ############################################
 // #####################################################################################################
+//  What the interference is drawn as:  CUTS (how many rows it is cut in)  and  APERTURE (how much each
+//  row is shifted).  A row j is shifted by  aperture * j.
+
 
 // =====================================================================================================
-//  3. MOTION · ROTATION
-//     slow down -> every particle eases to angle 0 -> hold -> release -> speed up
-//     The rotation speed changes (a little, slowly) from time to time, when the frequency changes.
+//  1.1  SHAPE · CUTS
+//       The number of cuts (rows) of the interference pattern. It changes only while the aperture is held
+//       at 0 (the aperture state does it, see 1.2): there the cuts can't be seen, so the change is invisible
+//       and shows up when the aperture comes back.
+// =====================================================================================================
+const CUTS = {
+  options: [3, 7, 9, 11, 13, 15, 17],  // possible numbers of cuts
+  start: 11,                            // number of cuts when the program starts
+
+  // With many cuts the FREQUENCY is kept HIGH, so the thin rows are filled with rings.
+  // While cuts > `above`, the frequency can't go below  minFreq + (cuts - above) * perRow
+  // (11 cuts -> 23, 13 -> 26, 15 -> 29). It eases in / out over `ease` seconds, so it isn't a jump.
+  highFreq: { above: 9, minFreq: 20, perRow: 1.5, ease: 6 },
+};
+let rows = CUTS.start;     // current number of cuts
+let freqFloor = 0;         // current minimum frequency (eases to the value that the cuts ask for)
+
+function cutsUpdate(dt) {
+  const H = CUTS.highFreq;
+  const floorTarget = rows > H.above ? H.minFreq + (rows - H.above) * H.perRow : 0;
+  freqFloor += (floorTarget - freqFloor) * (1 - exp(-dt / H.ease));
+}
+
+function cutsUniforms(sh) {
+  sh.setUniform('u_rows', rows);
+  sh.setUniform('u_freqFloor', freqFloor);
+}
+
+
+// =====================================================================================================
+//  1.2  SHAPE · APERTURE
+//
+//       THE PROPERTY
+//         * Every interference has its OWN aperture: it grows with the distance from the screen center,
+//           up to the current MAX aperture.
+//         * The MAX aperture is not fixed: from time to time it eases to a new random value.
+//         * The max aperture ALLOWED depends on the cuts (many cuts -> small aperture): apertureCap().
+//
+//       ITS STATES
+//         APERTURE        own value -> a fixed value (0, or a random peak) -> hold -> back.
+//                         While it is held at 0 the cuts change (and a new max aperture is picked).
+//         APERTURE SWING  own value -> +peak -> (smoothly through 0) -> -peak -> back.
+//         Every time one of them starts, its transitions get a random speed.
+//         When they go to a non-zero value they don't always reach the cap: they go to a random peak.
+// =====================================================================================================
+const APERTURE = {
+  // ---- the property ----
+  max: 0.2,                // START value of the max aperture (it changes later; never above the cap of the cuts)
+  minMax: 0.04,            // the max aperture never goes below this
+  maxChangeEvery: [20, 50],  // the max aperture changes to a random value (between minMax and the cap) every so often
+  maxEase: 12,               // seconds it takes to reach the new value
+
+  // MAX APERTURE ALLOWED for a number of cuts: it goes through these two points (cuts, max aperture).
+  // A row j is shifted by aperture * j, so the shift of the last rows is ~ aperture * cuts. With
+  // capMode 'inverse' that product is kept ~constant (the cap goes like 1 / cuts); with 'linear'
+  // the cap is a straight line between the two points.
+  //   cuts:  3     7     9     11    13    15    17
+  //   cap:   0.50  0.21  0.16  0.13  0.11  0.09  0.08      (capMode 'inverse')
+  capPoints: [[3, 0.5], [17, 0.08]],
+  capMode: 'inverse',
+
+  // ---- its states ----
+  zeroChance: 0.75,        // probability that the aperture state goes to 0 (otherwise to a peak). Cuts only change at 0
+  peakFraction: [0.25, 1], // the peak is a random value between these fractions of the cap of the current cuts
+                           // (the same value for all the interferences).   [1, 1] = always the cap
+  speed: [0.5, 1.4],       // random speed of the transitions of each aperture state (< 1 slower, > 1 faster)
+  times: {                 // APERTURE state: seconds (random inside each range, x the track timeScale / speed)
+    toFixed: [10, 20],
+    hold:    [3, 8],
+    back:    [10, 20],
+  },
+};
+const APERTURE_SWING = {
+  times: {                 // APERTURE SWING state
+    toMax:    [10, 20],    // own value -> +peak
+    holdMax:  [2, 5],
+    swing:    [12, 24],    // +peak -> -peak
+    holdNeg:  [2, 5],
+    back:     [10, 20],    // -peak -> own value
+  },
+};
+
+// max aperture allowed for a given number of cuts
+function apertureCap(r) {
+  const [[r0, a0], [r1, a1]] = APERTURE.capPoints;
+  const t = constrain((r - r0) / (r1 - r0), 0, 1);
+  if (APERTURE.capMode === 'linear') return lerp(a0, a1, t);
+  return lerp(a0 * r0, a1 * r1, t) / r;        // 'inverse': (aperture * cuts) goes from a0*r0 to a1*r1
+}
+
+// live values
+let aptMax = APERTURE.max; // current max aperture
+let aptMaxTarget = APERTURE.max;
+let aptMaxWait = 20;       // seconds until the next change of the max aperture
+let aptPeak = APERTURE.max; // the non-zero value the current state goes to (random, up to the cap of the cuts)
+let aptToMax = false;      // the fixed value of the current aperture state: false = 0, true = the peak
+
+// values sent to the shader. The aperture of an interference goes from A to B:
+//   A / B = its own aperture (oa / ob = 1)  or a fixed value (va / vb)
+const aptS = { k: 0, pat: 12, st: 0, va: 0, vb: 0, oa: 1, ob: 1 };
+
+// random value for a state that goes "to the peak": between peakFraction of the cap allowed by the cuts
+function pickPeak() {
+  return apertureCap(rows) * random(APERTURE.peakFraction[0], APERTURE.peakFraction[1]);
+}
+
+// the fixed value of the current aperture state
+function aptFixed() { return aptToMax ? aptPeak : 0; }
+
+// helper: set "from" and "to", each one either 'own' or a number
+function aptSet(k, from, to) {
+  aptS.k = k;
+  aptS.oa = from === 'own' ? 1 : 0;  aptS.va = from === 'own' ? 0 : from;
+  aptS.ob = to === 'own' ? 1 : 0;    aptS.vb = to === 'own' ? 0 : to;
+}
+
+function aptIdle() { aptSet(0, 'own', 'own'); }
+
+function aptInit() {
+  aptMax = min(APERTURE.max, apertureCap(rows));
+  aptMaxTarget = aptMax;
+  aptMaxWait = random(APERTURE.maxChangeEvery[0], APERTURE.maxChangeEvery[1]);
+}
+
+// new random cuts + a new max aperture that is allowed for them (called while the aperture is 0: invisible)
+function aptNewRows() {
+  rows = random(CUTS.options.filter(r => r !== rows));
+  aptMax = random(APERTURE.minMax, apertureCap(rows));
+  aptMaxTarget = aptMax;
+}
+
+// every frame: moves the max aperture
+function aptUpdate(dt) {
+  aptMaxWait -= dt;
+  if (aptMaxWait <= 0) {
+    aptMaxTarget = random(APERTURE.minMax, apertureCap(rows));
+    aptMaxWait = random(APERTURE.maxChangeEvery[0], APERTURE.maxChangeEvery[1]);
+  }
+  aptMax += (aptMaxTarget - aptMax) * (1 - exp(-dt / APERTURE.maxEase));
+  aptMax = min(aptMax, apertureCap(rows));
+}
+
+// ---- state: APERTURE ----
+function makeApertureCycle() {
+  const T = APERTURE.times;
+  const cyc = new Cycle([
+    { name: 'toFixed', range: T.toFixed, onStart: () => {
+        cyc.speed = random(APERTURE.speed[0], APERTURE.speed[1]);     // random speed for this run
+        aptToMax = random() >= APERTURE.zeroChance;
+        if (aptToMax) aptPeak = pickPeak();                           // random value, not always the cap
+        setPattern(aptS);
+      },
+      apply: k => aptSet(k, 'own', aptFixed()) },
+    { name: 'hold', range: T.hold,
+      onStart: () => { if (!aptToMax) aptNewRows(); },
+      apply: k => aptSet(1, aptFixed(), aptFixed()) },
+    { name: 'back', range: T.back, onStart: () => setPattern(aptS),
+      apply: k => aptSet(k, aptFixed(), 'own') },
+  ]);
+  return cyc;
+}
+
+// ---- state: APERTURE SWING ----
+function makeApertureSwingCycle() {
+  const T = APERTURE_SWING.times;
+  const cyc = new Cycle([
+    { name: 'toMax', range: T.toMax, onStart: () => {
+        cyc.speed = random(APERTURE.speed[0], APERTURE.speed[1]);
+        aptPeak = pickPeak();                                         // random value, not always the cap
+        setPattern(aptS);
+      },
+      apply: k => aptSet(k, 'own', aptPeak) },
+    { name: 'holdMax', range: T.holdMax, apply: k => aptSet(1, aptPeak, aptPeak) },
+    { name: 'swing',   range: T.swing,   onStart: () => setPattern(aptS),  apply: k => aptSet(k, aptPeak, -aptPeak) },
+    { name: 'holdNeg', range: T.holdNeg, apply: k => aptSet(1, -aptPeak, -aptPeak) },
+    { name: 'back',    range: T.back,    onStart: () => setPattern(aptS),  apply: k => aptSet(k, -aptPeak, 'own') },
+  ]);
+  return cyc;
+}
+
+function aptUniforms(sh) {
+  sh.setUniform('u_aptK', aptS.k);
+  sh.setUniform('u_aptPat', aptS.pat);
+  sh.setUniform('u_aptSt', aptS.st);
+  sh.setUniform('u_aptVA', aptS.va);
+  sh.setUniform('u_aptVB', aptS.vb);
+  sh.setUniform('u_aptOA', aptS.oa);
+  sh.setUniform('u_aptOB', aptS.ob);
+}
+
+function aptReport()   { return { goes_to: aptToMax ? 'peak ' + r3(aptPeak) : 'zero', ...patInfo(aptS) }; }
+function swingReport() { return { swing_between: '+' + r3(aptPeak) + ' and -' + r3(aptPeak), ...patInfo(aptS) }; }
+
+
+// #####################################################################################################
+// ##########################################   2 · SKINS   ############################################
+// #####################################################################################################
+//  How the interference is painted:  FREQUENCY (rings per unit)  ·  RGB SHIFT (chromatic aberration)  ·
+//  SUM (a second layer of rings added to the colour: "the double", final + final2)  ·  RUN (the rings flow).
+
+
+// =====================================================================================================
+//  2.1  SKINS · FREQUENCY
+//       state FREQUENCY: normal -> STEP (not smooth) to another value -> hold -> step back to normal
+//       (every change can also change the rotation speed, see ROTATION.speedChangeChance)
+//       The cuts can raise a minimum frequency (see CUTS.highFreq).
+// =====================================================================================================
+const FREQ_BASE = [10, 15, 20, 25][Math.floor(Math.random() * 4)];   // normal frequency: random every time the program runs
+const FREQUENCY = {
+  base: FREQ_BASE,
+  spread: 0,               // > 0 = every interference also gets its own random +/- variation of the frequency
+  options: [0, 10, 15, 20, 25].filter(f => f !== FREQ_BASE),   // the step goes to one of these (random each time)
+  times: {
+    sweepTo:   [4, 10],    // time the "wave" of steps takes to cross all the interferences
+    hold:      [4, 10],
+    sweepBack: [4, 10],
+  },
+};
+const frqS = { k: 0, a: 1, b: 1, pat: 12 };   // a / b = frequency multipliers before / after the step
+let frqTarget = FREQ_BASE;
+
+function frqIdle() { frqS.a = 1; frqS.b = 1; frqS.k = 0; }
+
+function makeFrequencyCycle() {
+  const T = FREQUENCY.times;
+  const ratio = () => frqTarget / FREQUENCY.base;
+  return new Cycle([
+    { name: 'sweepTo', range: T.sweepTo, onStart: () => { frqTarget = random(FREQUENCY.options); setPattern(frqS); rotMaybeChangeSpeed(); },
+      apply: k => { frqS.a = 1; frqS.b = ratio(); frqS.k = k; } },
+    { name: 'hold', range: T.hold, apply: k => { frqS.a = ratio(); frqS.b = frqS.a; frqS.k = 1; } },
+    { name: 'sweepBack', range: T.sweepBack, onStart: () => { setPattern(frqS); rotMaybeChangeSpeed(); },
+      apply: k => { frqS.a = ratio(); frqS.b = 1; frqS.k = k; } },
+  ]);
+}
+
+function frqUniforms(sh) {
+  sh.setUniform('u_freqK', frqS.k);
+  sh.setUniform('u_freqA', frqS.a);
+  sh.setUniform('u_freqB', frqS.b);
+  sh.setUniform('u_freqPat', frqS.pat);
+}
+
+function frqReport() { return { steps_to: frqTarget, ...patInfo(frqS) }; }
+
+
+// =====================================================================================================
+//  2.2  SKINS · RGB SHIFT (chromatic aberration)
+//       state CHROMA: R, G and B are drawn shifted: the shifts go from 0 to some random values (the same
+//       for every interference), hold, and come back to 0.
+// =====================================================================================================
+const CHROMA = {
+  min: 0.05,               // every component of the R, G, B shifts is random inside [min, max]
+  max: 0.1,                // (units: interference uv, the quad spans -1..1)
+  randomSign: false,       // true = each component also gets a random sign (+/-)
+  times: {
+    toValues: [10, 20],    // 0 -> the random shifts
+    hold:     [3, 8],
+    back:     [10, 20],    // shifts -> 0
+  },
+};
+const caS = { k: 0, from: 0, to: 0, pat: 12, st: 0, r: [0, 0], g: [0, 0], b: [0, 0] };
+
+function caIdle() { caS.from = 0; caS.to = 0; caS.k = 0; }
+
+function makeChromaCycle() {
+  const T = CHROMA.times;
+  const rnd = () => random(CHROMA.min, CHROMA.max) * (CHROMA.randomSign && random() < 0.5 ? -1 : 1);
+  return new Cycle([
+    { name: 'toValues', range: T.toValues, onStart: () => {
+        caS.r = [rnd(), rnd()]; caS.g = [rnd(), rnd()]; caS.b = [rnd(), rnd()];
+        setPattern(caS);
+      },
+      apply: k => { caS.from = 0; caS.to = 1; caS.k = k; } },
+    { name: 'hold', range: T.hold, apply: k => { caS.from = 1; caS.to = 1; caS.k = 1; } },
+    { name: 'back', range: T.back, onStart: () => setPattern(caS),
+      apply: k => { caS.from = 1; caS.to = 0; caS.k = k; } },
+  ]);
+}
+
+function caUniforms(sh) {
+  uState(sh, 'ca', caS);
+  sh.setUniform('u_caR', caS.r);
+  sh.setUniform('u_caG', caS.g);
+  sh.setUniform('u_caB', caS.b);
+}
+
+function caReport() { return patInfo(caS); }
+
+
+// =====================================================================================================
+//  2.3  SKINS · SUM  ("the double")
+//       state SUM: the second layer of rings (final2) fades in and is ADDED to the colour
+//       (final + final2), holds, and fades out.
+// =====================================================================================================
+const SUM = {
+  times: {
+    toValues: [10, 20],
+    hold:     [3, 8],
+    back:     [10, 20],
+  },
+};
+const sumS = { k: 0, from: 0, to: 0, pat: 12, st: 0 };
+
+function sumIdle() { sumS.from = 0; sumS.to = 0; sumS.k = 0; }
+
+function makeSumCycle() {
+  const T = SUM.times;
+  return new Cycle([
+    { name: 'toValues', range: T.toValues, onStart: () => setPattern(sumS),
+      apply: k => { sumS.from = 0; sumS.to = 1; sumS.k = k; } },
+    { name: 'hold', range: T.hold, apply: k => { sumS.from = 1; sumS.to = 1; sumS.k = 1; } },
+    { name: 'back', range: T.back, onStart: () => setPattern(sumS),
+      apply: k => { sumS.from = 1; sumS.to = 0; sumS.k = k; } },
+  ]);
+}
+
+function sumUniforms(sh) { uState(sh, 'sum', sumS); }
+
+function sumReport() { return patInfo(sumS); }
+
+
+// =====================================================================================================
+//  2.4  SKINS · RUN   (variant, not a state)
+//       SOMETIMES, when a skin state starts, the second value of pulseOsc (the phase) runs a little, so the
+//       rings slowly flow. It fades in and stops when that state ends.
+// =====================================================================================================
+const RUN = {
+  chance: 0.35,            // probability that a state starts with the rings running
+  speed: [0.1, 0.4],       // phase cycles per second (random each time)
+  ease: 2,                 // seconds to fade the running in / out
+};
+let runT = 0;              // accumulated phase (kept in 0..1: the rings repeat every 1)
+let runRate = 0;           // current running speed (eases to runTarget)
+let runTarget = 0;
+
+function runOnStateStart() { runTarget = random() < RUN.chance ? random(RUN.speed[0], RUN.speed[1]) : 0; }
+function runOnStateEnd()   { runTarget = 0; }
+function runUpdate(dt) {
+  runRate += (runTarget - runRate) * (1 - exp(-dt / RUN.ease));
+  runT = (runT + runRate * dt) % 1;
+}
+function runUniforms(sh) { sh.setUniform('u_runT', runT); }
+
+
+// #####################################################################################################
+// ########################################   3 · TRANSFORM   ##########################################
+// #####################################################################################################
+//  Where the interference is and how it moves:  POSITION (drift, velocity, camera)  ·  ROTATION.
+
+
+// =====================================================================================================
+//  3.1  TRANSFORM · POSITION
+//       * The CAMERA moves slowly through the world (the world is a loop around it).
+//       * Every interference DRIFTS in its own random direction (which slowly wanders), at its own speed
+//         (which slowly swings).
+//       * state VELOCITY: the speed of ALL the interferences eases to a fixed multiplier (0 = they freeze,
+//         > 1 = they rush), holds, and comes back to their own speed.
+// =====================================================================================================
+let camPos = [0, 0];
+let camVel = [0.0001, 0];  // camera speed per frame: [x, y]. Positive x = camera moves right
+const HALF = 1.3;          // world is a loop of width 2*HALF around the camera (always off-screen at the edge)
+const WRAP = HALF * 2;
+const CULL_LIM = 1.22;     // beyond this (screen space) an interference isn't drawn
+
+// own motion of every interference (a random direction that slowly wanders)
+const DRIFT_MIN = 0.0002;          // every interference picks its own speed between MIN and MAX
+const DRIFT_MAX = 0.0012;
+const DRIFT_BREATH = 0.6;          // 0 = constant speed. 0.6 = the speed slowly swings between 40% and 160%
+const DRIFT_BREATH_RATE = [0.1, 0.5]; // rad/s of that swing (every interference picks its own)
+const WANDER = 0.03;               // max random turn per frame (radians). 0 = straight lines
+
+// ---- state: VELOCITY ----
+const VELOCITY = {
+  targets: [0, 3],         // speed multiplier it goes to (random each time). 0 = stop, 3 = three times faster
+  times: {
+    toTarget: [10, 20],
+    hold:     [4, 10],
+    back:     [10, 20],
+  },
+};
+const velS = { k: 0, from: 1, to: 1, pat: 12, st: 0 };   // speed multiplier before / after (used in JS)
+let velTarget = 1;
+
+function velIdle() { velS.from = 1; velS.to = 1; velS.k = 0; }
+
+function makeVelocityCycle() {
+  const T = VELOCITY.times;
+  return new Cycle([
+    { name: 'toTarget', range: T.toTarget, onStart: () => { velTarget = random(VELOCITY.targets); setPattern(velS); },
+      apply: k => { velS.from = 1; velS.to = velTarget; velS.k = k; } },
+    { name: 'hold', range: T.hold, apply: k => { velS.from = velTarget; velS.to = velTarget; velS.k = 1; } },
+    { name: 'back', range: T.back, onStart: () => setPattern(velS),
+      apply: k => { velS.from = velTarget; velS.to = 1; velS.k = k; } },
+  ]);
+}
+
+function velUniforms(sh) { /* the velocity is applied in JS (see the interference loop in draw) */ }
+
+function velReport() { return { goes_to_speed_x: velTarget, ...patInfo(velS) }; }
+
+// speed multiplier of ONE interference, given its screen position and its random number
+function velMultiplier(sx, sy, rnd) {
+  if (velS.from === velS.to) return velS.from;
+  const o = orderOfJS(velS.pat, sx, sy, rnd);
+  return lerp(velS.from, velS.to, localProgJS(velS.k, o, velS.st));
+}
+
+
+// =====================================================================================================
+//  3.2  TRANSFORM · ROTATION
+//       state ROTATION: slow down -> every interference eases to angle 0 -> hold -> release -> speed up
+//       The rotation speed changes (a little, slowly) from time to time, when the frequency changes.
 // =====================================================================================================
 const ROTATION = {
   times: {                 // seconds (random inside each range, x MOTION_TRACK.timeScale)
     slow:    [4, 8],       // rotation speed goes to 0
-    align:   [10, 20],     // every particle eases to angle 0
+    align:   [10, 20],     // every interference eases to angle 0
     hold:    [4, 10],      // everybody stays at angle 0
     release: [10, 20],     // angles go back to their random values
     speedup: [4, 8],       // rotation speed comes back
@@ -280,13 +726,13 @@ function rotUpdate(dt) {
 function makeRotationCycle() {
   const T = ROTATION.times;
   return new Cycle([
-    { range: T.slow,    apply: k => { rotRate = 1 - ease(k); } },
-    { range: T.align,   onStart: () => setPattern(rotS),
+    { name: 'slow', range: T.slow, apply: k => { rotRate = 1 - ease(k); } },
+    { name: 'align', range: T.align, onStart: () => setPattern(rotS),
       apply: k => { rotRate = 0; rotS.from = 0; rotS.to = 1; rotS.k = k; } },
-    { range: T.hold,    apply: k => { rotRate = 0; rotS.from = 1; rotS.to = 1; rotS.k = 1; } },
-    { range: T.release, onStart: () => setPattern(rotS),
+    { name: 'hold', range: T.hold, apply: k => { rotRate = 0; rotS.from = 1; rotS.to = 1; rotS.k = 1; } },
+    { name: 'release', range: T.release, onStart: () => setPattern(rotS),
       apply: k => { rotRate = 0; rotS.from = 1; rotS.to = 0; rotS.k = k; } },
-    { range: T.speedup, apply: k => { rotRate = ease(k); rotS.from = 0; rotS.to = 0; rotS.k = 0; } },
+    { name: 'speedup', range: T.speedup, apply: k => { rotRate = ease(k); rotS.from = 0; rotS.to = 0; rotS.k = 0; } },
   ]);
 }
 
@@ -295,274 +741,7 @@ function rotUniforms(sh) {
   uState(sh, 'rot', rotS);
 }
 
-
-// =====================================================================================================
-//  4. MOTION · VELOCITY
-//     the speed of ALL the particles eases to a fixed multiplier (0 = they freeze, > 1 = they rush),
-//     holds, and comes back to their own speed.
-// =====================================================================================================
-const VELOCITY = {
-  targets: [0, 4],         // speed multiplier it goes to (random each time). 0 = stop, 4 = four times faster
-  times: {
-    toTarget: [10, 20],
-    hold:     [4, 10],
-    back:     [10, 20],
-  },
-};
-const velS = { k: 0, from: 1, to: 1, pat: 12, st: 0 };   // speed multiplier before / after (used in JS)
-let velTarget = 1;
-
-function velIdle() { velS.from = 1; velS.to = 1; velS.k = 0; }
-
-function makeVelocityCycle() {
-  const T = VELOCITY.times;
-  return new Cycle([
-    { range: T.toTarget, onStart: () => { velTarget = random(VELOCITY.targets); setPattern(velS); },
-      apply: k => { velS.from = 1; velS.to = velTarget; velS.k = k; } },
-    { range: T.hold,     apply: k => { velS.from = velTarget; velS.to = velTarget; velS.k = 1; } },
-    { range: T.back,     onStart: () => setPattern(velS),
-      apply: k => { velS.from = velTarget; velS.to = 1; velS.k = k; } },
-  ]);
-}
-
-function velUniforms(sh) { /* the velocity is applied in JS (see the particle loop in draw) */ }
-
-// speed multiplier of ONE particle, given its screen position and its random number
-function velMultiplier(sx, sy, rnd) {
-  if (velS.from === velS.to) return velS.from;
-  const o = orderOfJS(velS.pat, sx, sy, rnd);
-  return lerp(velS.from, velS.to, localProgJS(velS.k, o, velS.st));
-}
-
-
-// =====================================================================================================
-//  5. MOTION · APERTURE
-//     own value (by distance to the center) -> eases to a fixed value (0 or max) -> hold -> back
-//     While the aperture is held at 0 the "rows" of the pattern change (invisibly; they show when it returns).
-// =====================================================================================================
-const APERTURE = {
-  max: 0.09,               // the "maximum" aperture, also the top of the normal distance-based range
-  times: {
-    toFixed: [10, 20],
-    hold:    [3, 8],
-    back:    [10, 20],
-  },
-  rowOptions: [3, 7, 9, 11, 13, 15],  // possible number of rows of the interference pattern
-  // With many rows (cuts) the frequency is kept HIGH, so the thin rows are filled with rings.
-  // While rows > `above`, the frequency can't go below  minFreq + (rows - above) * perRow
-  // (rows 11 -> 23, 13 -> 26, 15 -> 29). It eases in / out over `ease` seconds, so it isn't a jump.
-  highRows: { above: 9, minFreq: 20, perRow: 1.5, ease: 6 },
-};
-// values sent to the shader. The aperture of a particle goes from A to B:
-//   A / B = its own aperture (oa / ob = 1)  or a fixed value (va / vb)
-const aptS = { k: 0, pat: 12, st: 0, va: 0, vb: 0, oa: 1, ob: 1 };
-let aptTarget = 0;
-let rows = 9;
-let freqFloor = 0;        // current minimum frequency (eases to the value that the rows ask for)
-
-// helper: set "from" and "to", each one either 'own' or a number
-function aptSet(k, from, to) {
-  aptS.k = k;
-  aptS.oa = from === 'own' ? 1 : 0;  aptS.va = from === 'own' ? 0 : from;
-  aptS.ob = to === 'own' ? 1 : 0;    aptS.vb = to === 'own' ? 0 : to;
-}
-
-function aptIdle() { aptSet(0, 'own', 'own'); }
-
-// keeps the frequency high while there are many rows
-function aptUpdate(dt) {
-  const H = APERTURE.highRows;
-  const target = rows > H.above ? H.minFreq + (rows - H.above) * H.perRow : 0;
-  freqFloor += (target - freqFloor) * (1 - exp(-dt / H.ease));
-}
-
-function makeApertureCycle() {
-  const T = APERTURE.times;
-  return new Cycle([
-    { range: T.toFixed, onStart: () => { aptTarget = random() < 0.5 ? 0 : APERTURE.max; setPattern(aptS); },
-      apply: k => aptSet(k, 'own', aptTarget) },
-    { range: T.hold,
-      onStart: () => { if (aptTarget === 0) rows = random(APERTURE.rowOptions.filter(r => r !== rows)); },
-      apply: k => aptSet(1, aptTarget, aptTarget) },
-    { range: T.back,    onStart: () => setPattern(aptS),
-      apply: k => aptSet(k, aptTarget, 'own') },
-  ]);
-}
-
-function aptUniforms(sh) {
-  sh.setUniform('u_aptK', aptS.k);
-  sh.setUniform('u_aptPat', aptS.pat);
-  sh.setUniform('u_aptSt', aptS.st);
-  sh.setUniform('u_aptVA', aptS.va);
-  sh.setUniform('u_aptVB', aptS.vb);
-  sh.setUniform('u_aptOA', aptS.oa);
-  sh.setUniform('u_aptOB', aptS.ob);
-  sh.setUniform('u_rows', rows);
-  sh.setUniform('u_freqFloor', freqFloor);
-}
-
-
-// =====================================================================================================
-//  6. MOTION · APERTURE SWING
-//     own value -> +max -> (smoothly through 0) -> -max -> back to the own value.
-//     Uses the same aperture values as the state above (they never run at the same time).
-// =====================================================================================================
-const APERTURE_SWING = {
-  times: {
-    toMax:    [10, 20],    // own value -> +max
-    holdMax:  [2, 5],
-    swing:    [12, 24],    // +max -> -max
-    holdNeg:  [2, 5],
-    back:     [10, 20],    // -max -> own value
-  },
-};
-
-function makeApertureSwingCycle() {
-  const T = APERTURE_SWING.times;
-  const M = APERTURE.max;
-  return new Cycle([
-    { range: T.toMax,   onStart: () => setPattern(aptS),  apply: k => aptSet(k, 'own', M) },
-    { range: T.holdMax, apply: k => aptSet(1, M, M) },
-    { range: T.swing,   onStart: () => setPattern(aptS),  apply: k => aptSet(k, M, -M) },
-    { range: T.holdNeg, apply: k => aptSet(1, -M, -M) },
-    { range: T.back,    onStart: () => setPattern(aptS),  apply: k => aptSet(k, -M, 'own') },
-  ]);
-}
-
-
-// #####################################################################################################
-// ######################################   GROUP B · SKIN STATES   ####################################
-// #####################################################################################################
-
-// =====================================================================================================
-//  7. SKIN · FREQUENCY
-//     normal -> STEP (not smooth) to another value -> hold -> step back to normal
-//     (every change can also change the rotation speed, see ROTATION.speedChangeChance)
-// =====================================================================================================
-const FREQ_BASE = [10, 15, 20, 25][Math.floor(Math.random() * 4)];   // normal frequency: random every time the program runs
-const FREQUENCY = {
-  base: FREQ_BASE,
-  spread: 0,               // > 0 = every particle also gets its own random +/- variation of the frequency
-  options: [0, 10, 15, 20, 25].filter(f => f !== FREQ_BASE),   // the step goes to one of these (random each time)
-  times: {
-    sweepTo:   [4, 10],    // time the "wave" of steps takes to cross all the particles
-    hold:      [4, 10],
-    sweepBack: [4, 10],
-  },
-};
-const frqS = { k: 0, a: 1, b: 1, pat: 12 };   // a / b = frequency multipliers before / after the step
-let frqTarget = FREQ_BASE;
-
-function frqIdle() { frqS.a = 1; frqS.b = 1; frqS.k = 0; }
-
-function makeFrequencyCycle() {
-  const T = FREQUENCY.times;
-  const ratio = () => frqTarget / FREQUENCY.base;
-  return new Cycle([
-    { range: T.sweepTo,   onStart: () => { frqTarget = random(FREQUENCY.options); setPattern(frqS); rotMaybeChangeSpeed(); },
-      apply: k => { frqS.a = 1; frqS.b = ratio(); frqS.k = k; } },
-    { range: T.hold,      apply: k => { frqS.a = ratio(); frqS.b = frqS.a; frqS.k = 1; } },
-    { range: T.sweepBack, onStart: () => { setPattern(frqS); rotMaybeChangeSpeed(); },
-      apply: k => { frqS.a = ratio(); frqS.b = 1; frqS.k = k; } },
-  ]);
-}
-
-function frqUniforms(sh) {
-  sh.setUniform('u_freqK', frqS.k);
-  sh.setUniform('u_freqA', frqS.a);
-  sh.setUniform('u_freqB', frqS.b);
-  sh.setUniform('u_freqPat', frqS.pat);
-}
-
-
-// =====================================================================================================
-//  9. SKIN · RGB SHIFT (chromatic aberration)
-//     R, G and B are drawn shifted: the shifts go from 0 to some random values (the same for every
-//     particle), hold, and come back to 0.
-// =====================================================================================================
-const CHROMA = {
-  min: 0.05,               // every component of the R, G, B shifts is random inside [min, max]
-  max: 0.1,                // (units: particle uv, the quad spans -1..1)
-  randomSign: false,       // true = each component also gets a random sign (+/-)
-  times: {
-    toValues: [10, 20],    // 0 -> the random shifts
-    hold:     [3, 8],
-    back:     [10, 20],    // shifts -> 0
-  },
-};
-const caS = { k: 0, from: 0, to: 0, pat: 12, st: 0, r: [0, 0], g: [0, 0], b: [0, 0] };
-
-function caIdle() { caS.from = 0; caS.to = 0; caS.k = 0; }
-
-function makeChromaCycle() {
-  const T = CHROMA.times;
-  const rnd = () => random(CHROMA.min, CHROMA.max) * (CHROMA.randomSign && random() < 0.5 ? -1 : 1);
-  return new Cycle([
-    { range: T.toValues, onStart: () => {
-        caS.r = [rnd(), rnd()]; caS.g = [rnd(), rnd()]; caS.b = [rnd(), rnd()];
-        setPattern(caS);
-      },
-      apply: k => { caS.from = 0; caS.to = 1; caS.k = k; } },
-    { range: T.hold,     apply: k => { caS.from = 1; caS.to = 1; caS.k = 1; } },
-    { range: T.back,     onStart: () => setPattern(caS),
-      apply: k => { caS.from = 1; caS.to = 0; caS.k = k; } },
-  ]);
-}
-
-function caUniforms(sh) {
-  uState(sh, 'ca', caS);
-  sh.setUniform('u_caR', caS.r);
-  sh.setUniform('u_caG', caS.g);
-  sh.setUniform('u_caB', caS.b);
-}
-
-
-// =====================================================================================================
-//  8. SKIN · SUM
-//     the second layer of rings (final2) fades in and is ADDED to the colour (final + final2),
-//     holds, and fades out.
-// =====================================================================================================
-const SUM = {
-  times: {
-    toValues: [10, 20],
-    hold:     [3, 8],
-    back:     [10, 20],
-  },
-};
-const sumS = { k: 0, from: 0, to: 0, pat: 12, st: 0 };
-
-function sumIdle() { sumS.from = 0; sumS.to = 0; sumS.k = 0; }
-
-function makeSumCycle() {
-  const T = SUM.times;
-  return new Cycle([
-    { range: T.toValues, onStart: () => setPattern(sumS),
-      apply: k => { sumS.from = 0; sumS.to = 1; sumS.k = k; } },
-    { range: T.hold,     apply: k => { sumS.from = 1; sumS.to = 1; sumS.k = 1; } },
-    { range: T.back,     onStart: () => setPattern(sumS),
-      apply: k => { sumS.from = 1; sumS.to = 0; sumS.k = k; } },
-  ]);
-}
-
-function sumUniforms(sh) { uState(sh, 'sum', sumS); }
-
-
-// =====================================================================================================
-// 10. TRACKS REGISTRY  (add / remove / reorder states here)
-// =====================================================================================================
-const MOTION_STATES = [
-  { name: 'rotation',      make: makeRotationCycle,      idle: rotIdle, uniforms: rotUniforms },
-  { name: 'velocity',      make: makeVelocityCycle,      idle: velIdle, uniforms: velUniforms },
-  { name: 'aperture',      make: makeApertureCycle,      idle: aptIdle, uniforms: aptUniforms },
-  { name: 'apertureSwing', make: makeApertureSwingCycle, idle: aptIdle, uniforms: aptUniforms },
-];
-const SKIN_STATES = [
-  { name: 'frequency', make: makeFrequencyCycle, idle: frqIdle, uniforms: frqUniforms },
-  { name: 'sum',       make: makeSumCycle,       idle: sumIdle, uniforms: sumUniforms,    start: 1 },   // start: phase to begin in (1 = hold)
-  { name: 'chroma',    make: makeChromaCycle,    idle: caIdle,  uniforms: caUniforms,     start: 1 },
-];
-const motionTrack = new Track('motion', MOTION_TRACK, MOTION_STATES);
-const skinsTrack  = new Track('skins',  SKINS_TRACK,  SKIN_STATES);
+function rotReport() { return patInfo(rotS); }
 
 function rotationIsRunning() {
   return motionTrack.running() === 'rotation';
@@ -570,29 +749,10 @@ function rotationIsRunning() {
 
 
 // =====================================================================================================
-// 11. VARIANTS (not states: they happen "sometimes", on top of whatever is going on)
+//  3.3  TRANSFORM · ZONE   (variant, not a state; it touches POSITION and ROTATION)
+//       Suddenly a random segment of the screen wakes up: the interferences inside it start to move
+//       faster, rotate, or both. It fades in, stays a while and fades out.
 // =====================================================================================================
-
-// ---- 11a. RUN: the second value of pulseOsc (the phase) runs a little, so the rings slowly flow ----
-const RUN = {
-  chance: 0.35,            // probability that a state starts with the rings running
-  speed: [0.1, 0.4],       // phase cycles per second (random each time)
-  ease: 2,                 // seconds to fade the running in / out
-};
-let runT = 0;              // accumulated phase (kept in 0..1: the rings repeat every 1)
-let runRate = 0;           // current running speed (eases to runTarget)
-let runTarget = 0;
-
-function runOnStateStart() { runTarget = random() < RUN.chance ? random(RUN.speed[0], RUN.speed[1]) : 0; }
-function runOnStateEnd()   { runTarget = 0; }
-function runUpdate(dt) {
-  runRate += (runTarget - runRate) * (1 - exp(-dt / RUN.ease));
-  runT = (runT + runRate * dt) % 1;
-}
-function runUniforms(sh) { sh.setUniform('u_runT', runT); }
-
-// ---- 11b. ZONE: suddenly a random segment of the screen wakes up: the particles inside it start to
-//          move faster, rotate, or both. It fades in, stays a while and fades out. ----
 const ZONE = {
   wait: [20, 50],          // seconds between two events
   duration: [10, 20],      // seconds an event lasts
@@ -602,7 +762,7 @@ const ZONE = {
   soft: 0.15,              // softness of the edges
   types: ['move', 'rotate', 'both'],  // what wakes up (random each time)
   moveBoost: 6,            // inside the zone the speed is multiplied by (1 + moveBoost)
-  rotSpeed: 1.0,           // extra rotation (rad/s) inside the zone; every particle picks its own direction
+  rotSpeed: 1.0,           // extra rotation (rad/s) inside the zone; every interference picks its own direction
 };
 const zone = { active: false, wait: 15, t: 0, dur: 1, cx: 0, cy: 0, hw: 0.4, hh: 0.4, type: 'move', env: 0 };
 
@@ -619,6 +779,7 @@ function zoneUpdate(dt) {
       zone.cx = random(-0.8, 0.8);
       zone.cy = random(-0.8, 0.8);
       zone.type = random(ZONE.types);
+      if (LOG.onChange) logState('zone variant STARTS (' + zone.type + ')');
     }
     return;
   }
@@ -629,6 +790,7 @@ function zoneUpdate(dt) {
     zone.active = false;
     zone.env = 0;
     zone.wait = random(ZONE.wait[0], ZONE.wait[1]);
+    if (LOG.onChange) logState('zone variant ENDS');
   }
 }
 
@@ -637,7 +799,7 @@ function smoothStep(a, b, x) {
   return t * t * (3 - 2 * t);
 }
 
-// 0..1: how much the zone affects a particle that is at (sx, sy) on the screen
+// 0..1: how much the zone affects an interference that is at (sx, sy) on the screen
 function zoneWeight(sx, sy) {
   if (!zone.active) return 0;
   const wx = 1 - smoothStep(zone.hw - ZONE.soft, zone.hw, abs(sx - zone.cx));
@@ -647,7 +809,27 @@ function zoneWeight(sx, sy) {
 
 
 // =====================================================================================================
-// 12. SHADERS
+//  4. TRACKS REGISTRY  (add / remove / reorder states here)
+//     group:  the property group the state acts on (just for the console report)
+//     weight: how often a state is picked (default 1).   start: phase to begin in at program start (1 = hold)
+// =====================================================================================================
+const MOTION_STATES = [
+  { name: 'rotation',      group: 'transform', make: makeRotationCycle,      idle: rotIdle, uniforms: rotUniforms, report: rotReport },
+  { name: 'velocity',      group: 'transform', make: makeVelocityCycle,      idle: velIdle, uniforms: velUniforms, report: velReport },
+  { name: 'aperture',      group: 'shape',     make: makeApertureCycle,      idle: aptIdle, uniforms: aptUniforms, report: aptReport, weight: 3 },   // the one that changes the cuts
+  { name: 'apertureSwing', group: 'shape',     make: makeApertureSwingCycle, idle: aptIdle, uniforms: aptUniforms, report: swingReport },
+];
+const SKIN_STATES = [
+  { name: 'frequency', group: 'skins', make: makeFrequencyCycle, idle: frqIdle, uniforms: frqUniforms, report: frqReport },
+  { name: 'sum',       group: 'skins', make: makeSumCycle,       idle: sumIdle, uniforms: sumUniforms, report: sumReport, start: 1 },
+  { name: 'chroma',    group: 'skins', make: makeChromaCycle,    idle: caIdle,  uniforms: caUniforms,  report: caReport,  start: 1 },
+];
+const motionTrack = new Track('motion', MOTION_TRACK, MOTION_STATES);
+const skinsTrack  = new Track('skins',  SKINS_TRACK,  SKIN_STATES);
+
+
+// =====================================================================================================
+//  5. SHADERS
 // =====================================================================================================
 const VERT = `
     precision mediump float;
@@ -814,12 +996,11 @@ const FRAG = `
       return 130.0 * dot(m, g);
     }
 
-    vec3 pulseOsc(float _freq, float speed, float coord) {
+    vec3 pulseOsc(vec2 uv, float _freq, float speed, float coord) {
       float ramp = fract(coord * _freq + speed);
 
       float mmm = mix(vUV.y,0.1,1.4);
       float mmm2 = mix(vAperture,0.1,6.);
-      // mmm+=mmm2;
       float pulse = 1.0 - smoothstep(0.4, 0.45, ramp);
       return vec3(pulse);
     }
@@ -841,8 +1022,7 @@ const FRAG = `
 
       float d = interference(uv, u_rows, vAperture);
 
-      // chromatic aberration: one distance per colour channel, each with its own uv shift
-      // (shift = channel offset * vCA). With vCA = 0 the three channels are identical.
+
       vec3 dRGB = vec3(d);
       if (vCA > 0.001) {
         dRGB = vec3(
@@ -851,18 +1031,17 @@ const FRAG = `
           interference(uv + u_caB * vCA, u_rows, vAperture)
         );
       }
-      // (u_runT is the "run" variant: it moves the second value of pulseOsc, so the rings flow)
+
       vec3 final = vec3(
-        pulseOsc(vFreq, vAperture*5. + u_runT, dRGB.r).x,
-        pulseOsc(vFreq, vAperture*5. + u_runT, dRGB.g).x,
-        pulseOsc(vFreq, vAperture*5. + u_runT, dRGB.b).x
+        pulseOsc(uv,vFreq, vAperture*5. + u_runT, dRGB.r).x,
+        pulseOsc(uv,vFreq, vAperture*5. + u_runT, dRGB.g).x,
+        pulseOsc(uv,vFreq, vAperture*5. + u_runT, dRGB.b).x
       );
 
-      // second layer of rings (final2): only computed while the "sum" state is on
       vec3 final2 = vec3(0.0);
       if (vSum > 0.001) {
         float d2 = interference(uv+vec2(sin(vTimeOffset*2.)*0.05,0.01), u_rows, vAperture);
-        final2 = pulseOsc(vFreq, 0.26 + u_runT, d2);
+        final2 = pulseOsc(uv,vFreq, 0.26 + u_runT, d2);
       }
 
       if (min(dRGB.r, min(dRGB.g, dRGB.b)) > 0.5) discard;   // outside in every channel
@@ -885,6 +1064,11 @@ const FRAG = `
       // a channel that is outside the shape shows the white background
       vec3 inside = step(dRGB, vec3(0.5));
       final = mix(vec3(1.0), final, inside);
+
+
+      // if(d<0.03){
+      // final = vec3(1.0);
+      // }
 
       return vec4((final),1.0);
     }
@@ -956,8 +1140,10 @@ const POST_FRAG = `
   `;
 
 
+
+
 // =====================================================================================================
-// 13. SETUP
+//  6. SETUP
 // =====================================================================================================
 let posArray = [];
 let velArray = [];
@@ -1025,9 +1211,9 @@ function setup() {
     -1, -1,  1, 1,  -1, 1
   ];
 
-  vertCount = numParticles * 6;
+  vertCount = numInterferences * 6;
 
-  for(let i=0; i<numParticles; i++) {
+  for(let i=0; i<numInterferences; i++) {
     // random position in the world, random direction, random own speed
     let px = random(-HALF, HALF);
     let py = random(-HALF, HALF);
@@ -1088,16 +1274,17 @@ function setup() {
 
   offBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, offBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, numParticles * 6 * 2 * 4, gl.DYNAMIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, numInterferences * 6 * 2 * 4, gl.DYNAMIC_DRAW);
   gl.enableVertexAttribArray(offLoc);
   gl.vertexAttribPointer(offLoc, 2, gl.FLOAT, false, 0, 0);
   buffers.offBuffer = offBuffer;
 
-  drawOrder = [...Array(numParticles).keys()];
+  drawOrder = [...Array(numInterferences).keys()];
 
   // states: build every cycle of both tracks, and start resting
   motionTrack.init();
   skinsTrack.init();
+  aptInit();
   zone.wait = random(ZONE.wait[0], ZONE.wait[1]);
 
   // rectangles: start spread over the screen and to the right
@@ -1106,6 +1293,8 @@ function setup() {
     spawnRect(r, true);
     rects.push(r);
   }
+
+  logState('start');
 }
 
 // place a rectangle in world space.
@@ -1119,26 +1308,30 @@ function spawnRect(r, initial) {
 }
 
 
+
+
 // =====================================================================================================
-// 14. UPDATE  (dt in seconds)
+//  7. UPDATE  (dt in seconds)
 // =====================================================================================================
 let frameDt = 0.016;
 
 function updateStates(dt) {
-  motionTrack.update(dt);      // rotation / velocity / aperture / aperture swing
+  motionTrack.update(dt);      // aperture / aperture swing / rotation / velocity
   skinsTrack.update(dt);       // frequency / sum / rgb shift   (independent from the motion track)
-  rotUpdate(dt);
-  aptUpdate(dt);
+  rotUpdate(dt);               // rotation speed and angle
+  aptUpdate(dt);               // max aperture
+  cutsUpdate(dt);              // frequency floor asked by the cuts
 }
 
 function updateVariants(dt) {
   runUpdate(dt);
   zoneUpdate(dt);
+  logTick(dt);
 }
 
 
 // =====================================================================================================
-// 15. DRAW
+//  8. DRAW
 // =====================================================================================================
 function draw() {
   // ==========================================
@@ -1154,6 +1347,7 @@ function draw() {
   updateStates(frameDt);
   updateVariants(frameDt);
   [...MOTION_STATES, ...SKIN_STATES].forEach(st => st.uniforms(shaderProgram));
+  cutsUniforms(shaderProgram);
   runUniforms(shaderProgram);
 
   const gl = pass1._renderer.GL;
@@ -1172,7 +1366,7 @@ function draw() {
 
   let respawnIndices = [];
 
-  for (let i = 0; i < numParticles; i++) {
+  for (let i = 0; i < numInterferences; i++) {
     let pos = posArray[i];
     let vel = velArray[i];
 
@@ -1224,8 +1418,8 @@ function draw() {
       sy = pos[1] - camPos[1];
     }
 
-    // aperture based on distance from screen center
-    let apt = map(dist(sx, sy, 0, 0), 0, 1, 0, APERTURE.max);
+    // own aperture: grows with the distance from the screen center, up to the current max aperture
+    let apt = constrain(map(dist(sx, sy, 0, 0), 0, 1, 0, aptMax), 0, aptMax);
     for (let v = 0; v < 6; v++) baseApertureData[i * 6 + v] = apt;
   }
 
@@ -1316,5 +1510,134 @@ function draw() {
 function keyPressed(){
   if(key=='s'){
     save();
+  }
+  if (key === LOG.key) logState('manual (key ' + LOG.key + ')');   // print every parameter in the console
+}
+
+
+// =====================================================================================================
+//  9. CONSOLE REPORT
+//     Prints ALL the parameters of the current state: the two tracks, and the SHAPE, SKINS and TRANSFORM
+//     properties of the interference.
+// =====================================================================================================
+const LOG = {
+  enabled: true,
+  onChange: true,          // print every time a state (or the zone variant) starts or ends
+  everySeconds: 0,         // > 0 = also print every N seconds
+  key: 'p',                // press this key to print on demand
+};
+let logTimer = 0;
+
+function r3(x) { return Math.round(x * 1000) / 1000; }
+
+// everything that defines the current state, grouped like the interference: SHAPE / SKINS / TRANSFORM
+function snapshot() {
+  const arr = a => a.map(r3);
+  return {
+    t: Math.round(millis() / 1000),
+
+    states: {
+      motion_track: motionTrack.status(),
+      skins_track: skinsTrack.status(),
+    },
+
+    shape: {
+      cuts: { rows, options: CUTS.options },
+      aperture: {
+        max_now: r3(aptMax),
+        max_target: r3(aptMaxTarget),
+        cap_for_these_cuts: r3(apertureCap(rows)),
+        peak_of_state: r3(aptPeak),
+        transition_from: aptS.oa ? 'own' : r3(aptS.va),
+        transition_to: aptS.ob ? 'own' : r3(aptS.vb),
+        transition_progress: r3(aptS.k),
+        next_max_change_in_s: r3(Math.max(aptMaxWait, 0)),
+      },
+    },
+
+    skins: {
+      frequency: {
+        base: FREQUENCY.base,
+        step_target: frqTarget,
+        multiplier_before: r3(frqS.a),
+        multiplier_after: r3(frqS.b),
+        step_progress: r3(frqS.k),
+        minimum_asked_by_cuts: r3(freqFloor),
+      },
+      rgb_shift: {
+        amount_from: r3(caS.from),
+        amount_to: r3(caS.to),
+        progress: r3(caS.k),
+        shift_r: arr(caS.r),
+        shift_g: arr(caS.g),
+        shift_b: arr(caS.b),
+      },
+      sum_double: {
+        amount_from: r3(sumS.from),
+        amount_to: r3(sumS.to),
+        progress: r3(sumS.k),
+      },
+      run: { rate: r3(runRate), phase: r3(runT) },
+    },
+
+    transform: {
+      position: {
+        camera: arr(camPos),
+        camera_velocity: camVel,
+        drift_speed_range: [DRIFT_MIN, DRIFT_MAX],
+        velocity_multiplier_from: r3(velS.from),
+        velocity_multiplier_to: r3(velS.to),
+        velocity_progress: r3(velS.k),
+      },
+      rotation: {
+        speed_now: r3(rotSpeed),
+        speed_target: r3(rotSpeedTarget),
+        rate: r3(rotRate),
+        angle_accumulated: r3(rotT),
+        toward_zero_from: r3(rotS.from),
+        toward_zero_to: r3(rotS.to),
+        toward_zero_progress: r3(rotS.k),
+      },
+      zone: zone.active
+        ? { type: zone.type, center: arr([zone.cx, zone.cy]), half_size: arr([zone.hw, zone.hh]), strength: r3(zone.env) }
+        : { active: false, next_in_s: r3(Math.max(zone.wait, 0)) },
+    },
+  };
+}
+
+// object -> indented text, one "name: value" per line (so everything is visible without opening anything)
+function formatLines(o, ind = '') {
+  let out = '';
+  for (const k of Object.keys(o)) {
+    const v = o[k];
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      out += ind + k + '\n' + formatLines(v, ind + '    ');
+    } else if (Array.isArray(v)) {
+      out += ind + k + ': [' + v.join(', ') + ']\n';
+    } else {
+      out += ind + k + ': ' + v + '\n';
+    }
+  }
+  return out;
+}
+
+function logState(reason) {
+  if (!LOG.enabled) return;
+  const s = snapshot();
+  console.log(
+    '\n══════ ' + reason + '  ·  t = ' + s.t + ' s ══════\n' +
+    'STATES\n'                    + formatLines(s.states, '    ') +
+    'INTERFERENCE · SHAPE\n'      + formatLines(s.shape, '    ') +
+    'INTERFERENCE · SKINS\n'      + formatLines(s.skins, '    ') +
+    'INTERFERENCE · TRANSFORM\n'  + formatLines(s.transform, '    ')
+  );
+}
+
+function logTick(dt) {
+  if (LOG.everySeconds <= 0) return;
+  logTimer += dt;
+  if (logTimer >= LOG.everySeconds) {
+    logTimer = 0;
+    logState('every ' + LOG.everySeconds + ' s');
   }
 }
