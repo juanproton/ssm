@@ -261,8 +261,10 @@ h1 {
     width: 110px;
   }
 
+  /* phone: one image per row (desktop keeps 2 columns) */
   #mosaic {
-    gap: 8px;
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 }
 </style>
