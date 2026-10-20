@@ -210,10 +210,9 @@ document.addEventListener("DOMContentLoaded", () => {
   for (let i = 1; i <= MAX_IMAGES; i++) {
     const img = new Image()
     img.alt = "Serie 4 — " + i
-    img.loading = "lazy"
-    img.onload = () => mosaic.appendChild(img)
-    img.onerror = () => {} /* file doesn't exist: skip it */
+    img.onerror = () => img.remove() /* file doesn't exist: skip it */
     img.src = "serie4_" + i + ".png"
+    mosaic.appendChild(img)
   }
 
 })
