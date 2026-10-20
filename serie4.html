@@ -142,6 +142,91 @@ h1 {
   display: block;
 }
 
+#mosaic img {
+  cursor: zoom-in;
+}
+
+/* LIGHTBOX (full screen presentation mode) */
+#lightbox {
+  position: fixed;
+  inset: 0;
+  background: white;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+#lightbox.open {
+  display: flex;
+}
+
+#lightbox img {
+  max-width: calc(100% - 160px);
+  max-height: calc(100% - 100px);
+  object-fit: contain;
+  display: block;
+  cursor: default;
+}
+
+#lightbox button {
+  position: absolute;
+  background: none;
+  border: none;
+  color: black;
+  font-family: Helvetica, sans-serif;
+  cursor: pointer;
+  padding: 16px;
+  line-height: 1;
+}
+
+#lb-prev,
+#lb-next {
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 44px;
+}
+
+#lb-prev { left: 10px; }
+#lb-next { right: 10px; }
+
+#lb-close {
+  top: 10px;
+  right: 14px;
+  font-size: 36px;
+}
+
+#lb-count {
+  position: absolute;
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 14px;
+}
+
+#lightbox button:hover {
+  opacity: 0.5;
+}
+
+@media (max-width: 800px) {
+  #lightbox img {
+    max-width: calc(100% - 20px);
+    max-height: calc(100% - 120px);
+  }
+
+  #lb-prev,
+  #lb-next {
+    top: auto;
+    bottom: 4px;
+    transform: none;
+    font-size: 36px;
+  }
+
+  #lb-prev { left: 10px; }
+  #lb-next { right: 10px; }
+}
+
 /* SKETCH (below the images) */
 #sketch-container {
   width: 100%;
@@ -182,7 +267,6 @@ h1 {
 
 <div class="description">
 This body of work explores the organization of the figure within a simple grid, seeking to generate new relationships through repetition and variation, suggesting a sense of progression and implicit movement.
-  Generative System. Medium: pen plotter. Size:25cm x 25cm . Open serie
 </div>
 
 <div id="mosaic"></div>
@@ -190,6 +274,15 @@ This body of work explores the organization of the figure within a simple grid, 
 <div id="sketch-container"></div>
 
 </main>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" aria-hidden="true">
+  <button id="lb-close" aria-label="Close">&times;</button>
+  <button id="lb-prev" aria-label="Previous">&#8249;</button>
+  <img id="lb-img" alt="" />
+  <button id="lb-next" aria-label="Next">&#8250;</button>
+  <div id="lb-count"></div>
+</div>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -232,6 +325,67 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 })
+
+/* LIGHTBOX */
+(function () {
+  const mosaic = document.getElementById("mosaic")
+  const box = document.getElementById("lightbox")
+  const big = document.getElementById("lb-img")
+  const count = document.getElementById("lb-count")
+  let index = 0
+
+  const imgs = () => Array.from(mosaic.querySelectorAll("img"))
+
+  function show(i) {
+    const list = imgs()
+    if (!list.length) return
+    index = (i + list.length) % list.length
+    big.src = list[index].src
+    count.textContent = (index + 1) + " / " + list.length
+  }
+
+  function open(i) {
+    show(i)
+    box.classList.add("open")
+    box.setAttribute("aria-hidden", "false")
+    document.body.style.overflow = "hidden"
+  }
+
+  function close() {
+    box.classList.remove("open")
+    box.setAttribute("aria-hidden", "true")
+    document.body.style.overflow = ""
+  }
+
+  mosaic.addEventListener("click", (e) => {
+    if (e.target.tagName === "IMG") open(imgs().indexOf(e.target))
+  })
+
+  document.getElementById("lb-prev").addEventListener("click", (e) => { e.stopPropagation(); show(index - 1) })
+  document.getElementById("lb-next").addEventListener("click", (e) => { e.stopPropagation(); show(index + 1) })
+  document.getElementById("lb-close").addEventListener("click", close)
+
+  /* click on the empty background closes it */
+  box.addEventListener("click", (e) => { if (e.target === box) close() })
+
+  /* keyboard */
+  document.addEventListener("keydown", (e) => {
+    if (!box.classList.contains("open")) return
+    if (e.key === "Escape") close()
+    if (e.key === "ArrowLeft") show(index - 1)
+    if (e.key === "ArrowRight") show(index + 1)
+  })
+
+  /* swipe on touch screens */
+  let startX = null
+  box.addEventListener("touchstart", (e) => { startX = e.touches[0].clientX }, { passive: true })
+  box.addEventListener("touchend", (e) => {
+    if (startX === null) return
+    const dx = e.changedTouches[0].clientX - startX
+    if (Math.abs(dx) > 50) show(dx < 0 ? index + 1 : index - 1)
+    startX = null
+  })
+})()
 
 /* SKETCH: move the p5 canvas into #sketch-container, below the images */
 window.addEventListener("load", () => {
