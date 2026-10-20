@@ -142,6 +142,19 @@ h1 {
   display: block;
 }
 
+/* SKETCH (below the images) */
+#sketch-container {
+  width: 100%;
+  margin-bottom: 80px;
+}
+
+#sketch-container canvas {
+  display: block;
+  max-width: 100%;
+  height: auto !important;
+  margin: 0 auto;
+}
+
 /* MOBILE */
 @media (max-width: 800px) {
   main {
@@ -173,6 +186,8 @@ This body of work explores the organization of the figure within a simple grid, 
 
 <div id="mosaic"></div>
 
+<div id="sketch-container"></div>
+
 </main>
 
 <script>
@@ -203,9 +218,9 @@ document.addEventListener("DOMContentLoaded", () => {
     })
   })
 
-  /* MOSAIC: serie4_1.png ... serie4_7.png (missing files are skipped) */
+  /* MOSAIC: serie4_1.png ... serie4_8.png (missing files are skipped) */
   const mosaic = document.getElementById("mosaic")
-  const MAX_IMAGES = 7
+  const MAX_IMAGES = 8
 
   for (let i = 1; i <= MAX_IMAGES; i++) {
     const img = new Image()
@@ -216,7 +231,30 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 })
+
+/* SKETCH: move the p5 canvas into #sketch-container, below the images */
+window.addEventListener("load", () => {
+  const container = document.getElementById("sketch-container")
+
+  const place = () => {
+    const c = document.querySelector("canvas.p5Canvas") || document.querySelector("body > canvas")
+    if (c && c.parentElement !== container) {
+      container.appendChild(c)
+      return true
+    }
+    return !!c
+  }
+
+  if (!place()) {
+    const obs = new MutationObserver(() => { if (place()) obs.disconnect() })
+    obs.observe(document.body, { childList: true, subtree: true })
+  }
+})
 </script>
+
+<!-- p5.js + the sketch -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script src="interfseq.js"></script>
 
 <script defer src="https://sibforms.com/forms/end-form/build/main.js"></script>
 
