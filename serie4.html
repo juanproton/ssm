@@ -142,6 +142,11 @@ h1 {
   display: block;
 }
 
+#mosaic {
+  position: relative;
+  z-index: 2;
+}
+
 #mosaic img {
   cursor: zoom-in;
 }
@@ -229,15 +234,21 @@ h1 {
 
 /* SKETCH (below the images) */
 #sketch-container {
+  position: relative;
   width: 100%;
   margin-bottom: 80px;
+  text-align: center;
+  clear: both;
 }
 
 #sketch-container canvas {
-  display: block;
+  position: static !important;
+  display: block !important;
   max-width: 100%;
   height: auto !important;
-  margin: 0 auto;
+  margin: 0 auto !important;
+  left: auto !important;
+  top: auto !important;
 }
 
 /* MOBILE */
@@ -357,9 +368,11 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.style.overflow = ""
   }
 
-  mosaic.addEventListener("click", (e) => {
-    if (e.target.tagName === "IMG") open(imgs().indexOf(e.target))
-  })
+  /* capture phase on document: works even if the sketch or other scripts intercept clicks */
+  document.addEventListener("click", (e) => {
+    const img = e.target.closest ? e.target.closest("#mosaic img") : null
+    if (img) open(imgs().indexOf(img))
+  }, true)
 
   document.getElementById("lb-prev").addEventListener("click", (e) => { e.stopPropagation(); show(index - 1) })
   document.getElementById("lb-next").addEventListener("click", (e) => { e.stopPropagation(); show(index + 1) })
