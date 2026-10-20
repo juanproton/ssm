@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SERIE 4 — Juan Pedro Vallejo</title>
+
+<link rel="stylesheet" href="https://sibforms.com/forms/end-form/build/sib-styles.css">
+
+<style>
+body {
+  margin: 0;
+  font-family: Helvetica, sans-serif;
+  color: black;
+  background: white;
+}
+
+/* ─── NAV (IMPORTANT) ───────────────── */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  z-index: 100;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+}
+
+nav a,
+.brand {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* DROPDOWN */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-content {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  background: white;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  min-width: 220px;
+  z-index: 30;
+}
+
+.dropdown-content a {
+  padding: 6px 8px;
+}
+
+.dropdown-content a:hover {
+  background: black;
+  color: white;
+}
+
+/* BREVO */
+.sib-form,
+#sib-form-container,
+#sib-container {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#sib-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+#sib-container input {
+  width: 180px;
+  border: none;
+  border-bottom: 1px solid black;
+  background: transparent;
+  padding: 4px 0;
+}
+
+#sib-form button {
+  background: black !important;
+  color: white !important;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+/* ─── CONTENT ───────────────────────── */
+main {
+  padding-top: 120px;
+  width: calc(100% - 80px);
+  max-width: 1100px;
+  margin: auto;
+}
+
+h1 {
+  font-size: 32px;
+  font-weight: normal;
+  margin-bottom: 20px;
+}
+
+.description {
+  max-width: 720px;
+  line-height: 1.5;
+  margin-bottom: 40px;
+}
+
+/* MOSAIC (2 columns) */
+#mosaic {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 60px;
+}
+
+#mosaic img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* MOBILE */
+@media (max-width: 800px) {
+  main {
+    width: calc(100% - 30px);
+  }
+
+  #sib-container input {
+    width: 110px;
+  }
+
+  #mosaic {
+    gap: 8px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div id="header"></div>
+
+<main>
+
+<h1>SERIE 4</h1>
+
+<div class="description">
+Fantasy
+</div>
+
+<div id="mosaic"></div>
+
+</main>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  /* LOAD HEADER */
+  fetch("./header.html?" + Date.now())
+  .then(response => response.text())
+  .then(data => {
+    document.getElementById("header").innerHTML = data
+
+    window.toggleMenu = function() {
+      const menu = document.getElementById("work-menu")
+
+      menu.style.display =
+        menu.style.display === "flex"
+        ? "none"
+        : "flex"
+    }
+
+    document.addEventListener("click", (e) => {
+      const dropdown = document.querySelector(".dropdown")
+      const menu = document.getElementById("work-menu")
+
+      if (dropdown && !dropdown.contains(e.target)) {
+        menu.style.display = "none"
+      }
+    })
+  })
+
+  /* MOSAIC: serie4_1.png ... serie4_7.png (missing files are skipped) */
+  const mosaic = document.getElementById("mosaic")
+  const MAX_IMAGES = 7
+
+  for (let i = 1; i <= MAX_IMAGES; i++) {
+    const img = new Image()
+    img.alt = "Serie 4 — " + i
+    img.loading = "lazy"
+    img.onload = () => mosaic.appendChild(img)
+    img.onerror = () => {} /* file doesn't exist: skip it */
+    img.src = "serie4_" + i + ".png"
+  }
+
+})
+</script>
+
+<script defer src="https://sibforms.com/forms/end-form/build/main.js"></script>
+
+</body>
+</html>
