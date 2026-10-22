@@ -281,6 +281,7 @@ function gridCell(ix, iy, cs) {
 
   gridGroup.addChild(item)
 }
+function radians(degrees){var pi = Math.PI;return degrees * (pi/180);}
 
 function updateGrid() {
   if (!GRID.show || !gridGroup || !outers.length) return
