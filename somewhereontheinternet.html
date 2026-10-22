@@ -89,37 +89,11 @@ body {
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
-  /* LOAD HEADER */
-  fetch("./header.html?" + Date.now())
-  .then(response => response.text())
-  .then(data => {
-    document.getElementById("header").innerHTML = data
 
-    window.toggleMenu = function() {
-      const menu = document.getElementById("work-menu")
-
-      menu.style.display =
-        menu.style.display === "flex"
-        ? "none"
-        : "flex"
-    }
-
-    document.addEventListener("click", (e) => {
-      const dropdown = document.querySelector(".dropdown")
-      const menu = document.getElementById("work-menu")
-
-      if (dropdown && !dropdown.contains(e.target)) {
-        menu.style.display = "none"
-      }
-    })
-  })
-
-});
-</script>
 
 <!-- paper.js + the sketch -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-core.min.js"></script>
- <script src="Random.js"></script>
+
                <script src="setupFunctions.js"></script>
                                                                            
 <script src="somewhere.js"></script>
