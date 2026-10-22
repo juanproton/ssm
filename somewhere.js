@@ -24,7 +24,7 @@ let config = {
 }
 let forceSharedEdge = true
 
-const PAD = 0.3
+const PAD = 0.6
 const CUTS = 11
 const FREQ = 25
 const ROT = 0
