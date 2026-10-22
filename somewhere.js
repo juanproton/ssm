@@ -24,7 +24,7 @@ let config = {
 }
 let forceSharedEdge = true
 
-const PAD = 300
+const PAD = 0.3
 const CUTS = 11
 const FREQ = 25
 const ROT = 0
@@ -131,7 +131,6 @@ let sprayCenter = { x: 0, y: 0 }
 let frame = 0
 let playing = false
 let timer = null
-let animBtn, resetBtn
 
 let bs = { unit: 1 }
 let brushes = []
@@ -144,77 +143,66 @@ let coordText = null
 let coordParts = []
 let coordNumIdx = []
 
-function setup() {
-  p = paper;
-  pad = PAD
-  const canvas = document.getElementById('canvasId');
-  effWidth  = (orientation === "portrait") ? a3Width  : a3Height;
-  effHeight = (orientation === "portrait") ? a3Height : a3Width;
+function computeSize() {
+  const canvas = document.getElementById('canvasId')
+  const host = canvas.parentElement
+  effWidth  = (orientation === "portrait") ? a3Width  : a3Height
+  effHeight = (orientation === "portrait") ? a3Height : a3Width
 
-  let a3Ratio = effHeight / effWidth;
+  const ratio = effHeight / effWidth
+  const availW = (host && host.clientWidth) || window.innerWidth
+  const availH = window.innerHeight * 0.95
 
-  let winW = window.innerWidth;
-  let winH = window.innerHeight;
-
-  if (winW / winH > effWidth / effHeight) {
-    previewH = winH * 0.95;
-    previewW = previewH / a3Ratio;
+  if (availW / availH > effWidth / effHeight) {
+    previewH = availH
+    previewW = previewH / ratio
   } else {
-    previewW = winW * 0.95;
-    previewH = previewW * a3Ratio;
+    previewW = availW
+    previewH = previewW * ratio
   }
-  scaleFactor = previewW / a3Width;
-  [w, h] = [previewW, previewH];
+  w = Math.max(100, Math.floor(previewW))
+  h = Math.max(100, Math.floor(previewH))
+  scaleFactor = w / a3Width
+  drawScale = Math.min(w / wFix, h / hFix)
+}
 
-  canvas.width = previewW;
-  canvas.height = previewH;
+let resizeTimer = null
+function onResize() {
+  clearTimeout(resizeTimer)
+  resizeTimer = setTimeout(() => {
+    const oldW = w, oldH = h
+    computeSize()
+    if (Math.abs(w - oldW) < 1 && Math.abs(h - oldH) < 1) return
+    p.view.viewSize = new p.Size(w, h)
+    generate()
+  }, 150)
+}
 
-  canvas.style.backgroundColor = 'white';
-  p.setup(canvas);
-  var tool = new p.Tool();
-  tool.onKeyDown = kdown;
-  let tokenData = genTokenData(123);
+function setup() {
+  p = paper
+  const canvas = document.getElementById('canvasId')
+  computeSize()
+  canvas.width = w
+  canvas.height = h
+  canvas.style.backgroundColor = 'transparent'
+  p.setup(canvas)
+  const tool = new p.Tool()
+  tool.onKeyDown = kdown
+  const tokenData = genTokenData(123)
   r = new Random(tokenData)
-  drawScale = Math.min(w / wFix, h / hFix);
-  white = new p.Color(251/255,250/255,245/255)
+  white = new p.Color(1)
   black = new p.Color(0.11)
   cols.push(black)
 
-  createUI()
   playing = AUTOPLAY
-  generate();
-  updateButtons()
+  generate()
 
+  window.addEventListener('resize', onResize)
   timer = setInterval(tick, 1000 / FPS)
-}
-
-function makeButton(label, onClick) {
-  const b = document.createElement('button')
-  b.textContent = label
-  b.style.cssText = 'padding:6px 14px;margin-right:6px;font:13px sans-serif;cursor:pointer'
-
-  b.addEventListener('click', () => { onClick(); b.blur() })
-  return b
-}
-
-function createUI() {
-  if (animBtn) return
-  const bar = document.createElement('div')
-  bar.style.cssText = 'position:fixed;top:10px;left:10px;z-index:10'
-  animBtn = makeButton('Pause', togglePlay)
-  resetBtn = makeButton('Reset', resetAnim)
-  bar.append(animBtn, resetBtn)
-  document.body.appendChild(bar)
-}
-
-function updateButtons() {
-  if (!animBtn) return
-  animBtn.textContent = playing ? 'Pause' : (frame > 0 ? 'Resume' : 'Animate')
 }
 
 function togglePlay() {
   playing = !playing
-  updateButtons()
 }
 
 function resetAnim() {
@@ -222,7 +210,6 @@ function resetAnim() {
   frame = 0
   resetBrush()
   applyFrame(0)
-  updateButtons()
 }
 
 function buildFills(interf) {
@@ -649,19 +636,11 @@ function generate() {
   arrayOfPaths = []
   frame = 0
 
-  let bg = new p.Path.Rectangle({
-    point: [0, 0],
-    size: [w, h],
-    fillColor: white,
-    strokeColor: white
-  })
-  bg.sendToBack()
-
   gridGroup = new p.Group()
   gridCells = new Map()
   outers = []
 
-  const size = (Math.min(w, h) - PAD * 2) / 2
+  const size = Math.min(w, h) * (1 - PAD * 2) / 2
   const pos = createVector(w / 2, h / 2)
 
   interference = new Interference(
@@ -713,7 +692,6 @@ function kdown(event) {
 
   if (event.key === 'g') {
     generate();
-    updateButtons()
   }
 
   if (event.key === 'space' || event.key === ' ' || event.key === 'a') {
