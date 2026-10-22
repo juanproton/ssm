@@ -37,13 +37,13 @@ const APERTURE_PERIOD = 24*2.5
 
 const BRUSH = {
   count: 1,
-  size: [0.1, 0.5],
+  size: [0.1, 0.35],
   sizeChance: 0.2,
   sizeEase: 0.2,
   colorSpread: true,
   maxTrail: 1400,
   tailTaper: 0.2,
-  gradientLen: [100, 2000],
+  gradientLen: [200, 2000],
   step: 1,
   density: 0,
   holdDots: 0,
