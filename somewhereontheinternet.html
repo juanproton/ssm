@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-<link rel="stylesheet" href="https://sibforms.com/forms/end-form/build/sib-styles.css">
+<title>SERIE 4 — Juan Pedro Vallejo</title>
 
 <style>
 body {
@@ -14,39 +13,7 @@ body {
   background: white;
 }
 
-/* ─── NAV (IMPORTANT) ───────────────── */
-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  padding: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: white;
-  z-index: 100;
-}
-
-.nav-left {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.nav-right {
-  display: flex;
-  align-items: center;
-}
-
-nav a,
-.brand {
-  color: black;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-/* SKETCH (full browser window, behind the header) */
+/* SKETCH (full browser window) */
 html,
 body {
   height: 100%;
@@ -68,36 +35,20 @@ body {
   width: 100% !important;
   height: 100% !important;
 }
-
-/* MOBILE */
-@media (max-width: 800px) {
-  #sib-container input {
-    width: 110px;
-  }
-}
 </style>
 </head>
 
 <body>
 
-<div id="header"></div>
-
 <div id="sketch-container">
   <canvas id="canvasId"></canvas>
 </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-
-
-
 <!-- paper.js + the sketch -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-core.min.js"></script>
+  <script src="setupFunction.js"></script>
 
-               <script src="setupFunctions.js"></script>
-                                                                           
-<script src="somewhere.js"></script>
-<script defer src="https://sibforms.com/forms/end-form/build/main.js"></script>
+<script src="sketch.js"></script>
 
 </body>
 </html>
