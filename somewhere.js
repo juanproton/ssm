@@ -23,7 +23,7 @@ let config = {
   stroke:false
 }
 let forceSharedEdge = true
-const FILL = 0.7   // fraction of the canvas width the figure occupies at its widest (aperture at max)
+const FILL = 0.6   // fraction of the canvas width the figure occupies at its widest (aperture at max)
 const PAD = 0.65
 const CUTS = 11
 const FREQ = 25
