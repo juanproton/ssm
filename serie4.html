@@ -251,6 +251,20 @@ h1 {
   top: auto !important;
 }
 
+/* VIDEO (below the sketch) */
+#video-container {
+  width: 100%;
+  margin-bottom: 80px;
+  text-align: center;
+}
+
+#video-container video {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
 /* MOBILE */
 @media (max-width: 800px) {
   main {
@@ -286,6 +300,13 @@ Generative serie. Medium: pen plotter. Open serie. 25cm x 25cm
 <div id="mosaic"></div>
 
 <div id="sketch-container"></div>
+
+<div id="video-container">
+  <video autoplay loop muted playsinline preload="auto">
+    <source src="serie4_mov.mp4" type="video/mp4">
+    <source src="serie4_mov.mov" type="video/quicktime">
+  </video>
+</div>
 
 </main>
 
