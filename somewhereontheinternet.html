@@ -1,12 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
+<link rel="stylesheet" href="https://sibforms.com/forms/end-form/build/sib-styles.css">
+
+<style>
+body {
+  margin: 0;
+  font-family: Helvetica, sans-serif;
+  color: black;
+  background: white;
+}
+
+/* ─── NAV (IMPORTANT) ───────────────── */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  z-index: 100;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+}
+
+nav a,
+.brand {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* SKETCH (full browser window, behind the header) */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+#sketch-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  z-index: 1;
+}
+
+#sketch-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* MOBILE */
+@media (max-width: 800px) {
+  #sib-container input {
+    width: 110px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div id="header"></div>
+
+<div id="sketch-container">
+  <canvas id="canvasId"></canvas>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  /* LOAD HEADER */
+  fetch("./header.html?" + Date.now())
+  .then(response => response.text())
+  .then(data => {
+    document.getElementById("header").innerHTML = data
+
+    window.toggleMenu = function() {
+      const menu = document.getElementById("work-menu")
+
+      menu.style.display =
+        menu.style.display === "flex"
+        ? "none"
+        : "flex"
+    }
+
+    document.addEventListener("click", (e) => {
+      const dropdown = document.querySelector(".dropdown")
+      const menu = document.getElementById("work-menu")
+
+      if (dropdown && !dropdown.contains(e.target)) {
+        menu.style.display = "none"
+      }
+    })
+  })
+
+});
+</script>
 
 <!-- paper.js + the sketch -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-core.min.js"></script
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-core.min.js"></script>
  <script src="Random.js"></script>
                <script src="setupFunctions.js"></script>
                                                                            
 <script src="somewhere.js"></script>
-
 <script defer src="https://sibforms.com/forms/end-form/build/main.js"></script>
 
 </body>
