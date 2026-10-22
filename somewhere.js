@@ -23,7 +23,7 @@ let config = {
   stroke:false
 }
 let forceSharedEdge = true
-
+const FILL = 0.85   // fraction of the canvas width the figure occupies at its widest (aperture at max)
 const PAD = 0.65
 const CUTS = 11
 const FREQ = 25
@@ -641,7 +641,7 @@ function generate() {
   gridCells = new Map()
   outers = []
 
-  const size = Math.min(w, h) * (1 - PAD * 2) / 2
+  const size = Math.min(w, h) * FILL / (2 * (1 + Math.abs(APERTURE)))
   const pos = createVector(w / 2, h / 2)
 
   interference = new Interference(
