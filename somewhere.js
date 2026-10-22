@@ -734,3 +734,721 @@ class Random {
         return o[this.random_int2(0, o.length - 1)];
     }
 }
+
+class Interference {
+  // midRatio: height of the middle band relative to the top/bottom bands
+  //   1 = all bands equal, 0.2 = middle band is 20% of the edge bands
+  constructor(index, pos, size, cuts, aperture, freq, rot, midRatio = 1) {
+    this.position = pos
+    this.index = index
+    this.size = size
+    this.cuts = Math.max(2, Math.round(cuts))   // integer >= 2
+    this.aperture = aperture
+    this.freq = Math.max(1, Math.round(freq))   // integer >= 1
+    this.rot = rot
+    this.midRatio = Math.max(0.01, midRatio)
+
+    this.rects = []
+    this.bands = []
+    this.radii = []
+    this.concentrics = []
+    this.donuts = []
+    this.lines = []
+    this.polygons = []
+
+    this.generate()
+
+    this.groupLines = Array.from({ length: this.rects.length }, () => [])
+
+    this.generateLines()
+    // Drawing is done by you: displayLines() / transformVertical() /
+    // transformGroups() / displayPolygon2()
+  }
+
+  // ---------------------------------------------------------------
+  // helpers
+  // ---------------------------------------------------------------
+
+  // Safe push into the global output array
+  output(path) {
+    if (typeof arrayOfPaths === 'undefined' || !arrayOfPaths) {
+      arrayOfPaths = []
+    }
+    arrayOfPaths.push(path)
+  }
+
+  // Copy a path keeping curve handles
+  copyPath(src) {
+    let path = new p.Path()
+    for (let seg of src.segments) {
+      path.add(new p.Segment(
+        seg.point.clone(),
+        seg.handleIn.clone(),
+        seg.handleOut.clone()
+      ))
+    }
+    path.closed = src.closed
+    return path
+  }
+
+  // Aperture offset for band j (-aperture ... +aperture)
+  offsetFor(j, count) {
+    return -this.aperture + (this.aperture * 2 * j) / (count - 1)
+  }
+
+  // ---------------------------------------------------------------
+  // generate(): builds the data (bands, radii, rect paths, circles)
+  // ---------------------------------------------------------------
+  generate() {
+    const start = this.position.y - this.size          // top of the circle
+    const totalH = this.size * 2                       // full diameter
+
+    // Band weights: edge bands = 1, middle band = midRatio, linear in between
+    const half = (this.cuts - 1) / 2
+    const weights = []
+    for (let i = 0; i < this.cuts; i++) {
+      const t = Math.abs(i - half) / half              // 0 at the center ... 1 at the ends
+      weights.push(this.midRatio + (1 - this.midRatio) * t)
+    }
+    const weightSum = weights.reduce((a, b) => a + b, 0)
+
+    // Horizontal bands that tile the full diameter exactly
+    let y0 = start
+    for (let i = 0; i < this.cuts; i++) {
+      const bandH = totalH * weights[i] / weightSum
+      const y1 = y0 + bandH
+      this.bands.push({ y0, y1 })
+
+      // kept because transformGroups() uses this.rects[j].bounds
+      const rect = new p.Path.Rectangle(
+        createVector(this.position.x - this.size * 2, y0),
+        this.size * 3,
+        bandH
+      )
+      this.rects.push(rect)
+      rect.remove()
+
+      y0 = y1
+    }
+
+    // Radii of the concentric circles, OUTER FIRST (index 0 = biggest)
+    const amp = this.size / this.freq
+    for (let i = 0; i <= this.freq; i++) {
+      this.radii.push(this.size - amp * i)
+    }
+
+    // Full circles, inner -> outer (same order as the original code)
+    for (let i = this.radii.length - 1; i >= 0; i--) {
+      const ccc = createCircle(this.position, this.radii[i], null, null)
+      this.concentrics.push(ccc)
+      ccc.remove()
+    }
+
+    // Rings (used by generatePolygons)
+    const reverse = reverseArray(this.concentrics)
+    for (let i = 0; i < reverse.length - 1; i++) {
+      const nPath = reverse[i].subtract(reverse[i + 1])
+      this.donuts.push(nPath)
+      nPath.remove()
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // generateLines(): for every band j and every circle i keep ONLY
+  // the part of the circle that lies inside the band (open arcs).
+  // ---------------------------------------------------------------
+  generateLines() {
+    const cx = this.position.x
+    const cy = this.position.y
+
+    for (let j = 0; j < this.bands.length; j++) {
+      const { y0, y1 } = this.bands[j]
+
+      for (let i = 0; i < this.radii.length; i++) {
+        const R = this.radii[i]
+        if (R <= 1e-6) continue                       // radius 0 = a point
+
+        for (const arc of this.arcsInBand(cx, cy, R, y0, y1)) {
+          arc.remove()                                // keep it off the canvas
+          const obj = { polygon: arc, index: i, file: j }
+          this.lines.push(obj)
+          this.groupLines[j].push(obj)
+        }
+      }
+    }
+  }
+
+  // Exact intersection of circle (cx, cy, R) with the band y0..y1.
+  // Circle: x = cx + R cos(a), y = cy + R sin(a). The band keeps the
+  // angles where  s0 <= sin(a) <= s1.
+  arcsInBand(cx, cy, R, y0, y1) {
+    const EPS = 1e-9
+    const s0 = (y0 - cy) / R
+    const s1 = (y1 - cy) / R
+
+    // band completely above or below the circle
+    if (s0 >= 1 - EPS || s1 <= -1 + EPS) return []
+
+    const hasTop = s0 <= -1 + EPS       // band contains the circle's top
+    const hasBottom = s1 >= 1 - EPS     // band contains the circle's bottom
+
+    const clamp = v => Math.max(-1, Math.min(1, v))
+    const a0 = Math.asin(clamp(s0))
+    const a1 = Math.asin(clamp(s1))
+
+    const pt = a => new p.Point(cx + R * Math.cos(a), cy + R * Math.sin(a))
+    const arc = (from, to) =>
+      new p.Path.Arc(pt(from), pt((from + to) / 2), pt(to))
+
+    // whole circle inside the band
+    if (hasTop && hasBottom) {
+      return [new p.Path.Circle(new p.Point(cx, cy), R)]
+    }
+
+    // contains the bottom: right side -> bottom -> left side
+    if (hasBottom) {
+      return [arc(a0, Math.PI - a0)]
+    }
+
+    // contains the top: left side -> top -> right side
+    if (hasTop) {
+      return [arc(Math.PI - a1, 2 * Math.PI + a1)]
+    }
+
+    // only crosses the sides: two arcs (right and left)
+    if (a1 - a0 < 1e-6) return []
+    return [
+      arc(a0, a1),                          // right
+      arc(Math.PI - a1, Math.PI - a0)       // left
+    ]
+  }
+
+  // ---------------------------------------------------------------
+  // optional polygon (filled) version
+  // ---------------------------------------------------------------
+  generatePolygons() {
+    for (let j = 0; j < this.rects.length; j++) {
+      for (let i = 0; i < this.donuts.length; i++) {
+        let offset = this.offsetFor(j, this.rects.length)
+        let isMid = j == Math.floor(this.rects.length / 2)
+
+        let nPath = this.rects[j].intersect(this.donuts[i])
+        if (!nPath) continue
+
+        if (nPath instanceof p.CompoundPath) {
+          let g1 = extractPathsFromCompound(nPath)
+          for (let ggg of g1.children) {
+            if (!isMid) ggg.position.x += offset
+            this.polygons.push({ polygon: ggg, index: i, file: j })
+          }
+        } else {
+          if (!isMid) nPath.position.x += offset
+          this.polygons.push({ polygon: nPath, index: i, file: j })
+        }
+      }
+    }
+  }
+
+  displayPolygon2() {
+    let sourceCircle = this.concentrics[this.concentrics.length - 1]
+    if (!sourceCircle) return
+
+    for (let j = 0; j < this.rects.length; j++) {
+      let offset = this.offsetFor(j, this.rects.length)
+
+      let circle = sourceCircle.clone()
+      let result = this.rects[j].clone({ insert: false }).intersect(circle)
+      circle.remove()
+
+      if (!result) continue
+
+      let sources = (result instanceof p.CompoundPath) ? [...result.children] : [result]
+
+      for (let src of sources) {
+        if (!src.segments || src.segments.length == 0) continue
+        let poly = this.copyPath(src)
+        poly.closed = true
+        poly.position.x += offset * 2
+        poly.position.y += offset * 2
+        poly.strokeColor = black
+        poly.fillColor = white
+        this.output(poly)
+      }
+
+      result.remove()
+    }
+  }
+
+  displayPolygon() {
+    let off = r.random_num(0, 10)
+    let colsB = [black, white]
+
+    for (let finalPath of this.polygons) {
+      finalPath.polygon.strokeColor = null
+
+      let idx = Math.floor(
+        finalPath.file * r.random_num(0.2, 1) +
+        Math.sin(radians(finalPath.file + finalPath.index / 5 + off / 2)) +
+        Math.cos(radians(finalPath.index * 50 + off))
+      )
+      let ccc = colsB[((idx % 2) + 2) % 2]   // avoid negative index
+
+      if (ccc == colsB[0]) {
+        finalPath.polygon.fillColor = null
+        finalPath.polygon.strokeColor = new p.Color(0)
+        this.output(finalPath.polygon)
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // display: each band's arcs are shifted horizontally by the aperture
+  // ---------------------------------------------------------------
+  displayLines() {
+    let mid = Math.floor(this.rects.length / 2)
+
+    for (let j = 0; j < this.groupLines.length; j++) {
+      let offset = (j == mid) ? 0 : this.offsetFor(j, this.rects.length)
+
+      for (let finalPath of this.groupLines[j]) {
+        let src = finalPath.polygon
+        if (!src || !src.segments || src.segments.length == 0) continue
+
+        let path = this.copyPath(src)
+        path.position.x += offset
+        
+        if (this.rot) {
+          path.rotate(this.rot, this.position)
+        }
+
+        path.strokeColor = black
+        path.fillColor = null
+        path.strokeWidth=5
+        this.output(path)
+      }
+    }
+  }
+  // ---------------------------------------------------------------
+  // 3D: the figure lies on the FLOOR of an isometric-style view.
+  // Rotate it around the vertical axis (yaw), tilt the floor towards
+  // the viewer (tilt), project to 2D, then extrude every arc along a
+  // direction on the screen and close it into a NEW polygon.
+  //
+  //   yawDeg         rotation of the floor around the vertical axis (45 = isometric)
+  //   tiltDeg        camera elevation over the floor:
+  //                  90 = seen from above (flat), 35.264 = true isometric,
+  //                  30 = 2:1 "game" isometric
+  //   perspective    0 = orthographic, small values (0.001 ~ 0.003) add depth
+  //   bottomY        canvas y where the extrusion stops (only used when
+  //                  extrudeLength is null)
+  //   fill           fill the polygons with `white` so later ones hide earlier ones
+  //   bottomLast     true  = the pieces farthest along the extrusion direction
+  //                          are drawn LAST (on top); false = opposite order
+  //   extrudeAngle   direction of the extrusion on the screen, in degrees
+  //                  (y points down): 90 = straight down, 45 = down-right,
+  //                  135 = down-left, 0 = right, 180 = left
+  //   extrudeLength  fixed extrusion length in px (the polygon is the arc, plus
+  //                  the arc moved by that length)
+  //                  null = extrude until the flat line y = bottomY
+  //   gradient       color every polygon by the concentric circle it belongs to:
+  //                  outermost circle = black ... innermost = white (needs fill = true).
+  //                  All pieces of the same circle get exactly the same color
+  //   gradientFlip   true = innermost black ... outermost white
+  //   fade           true = inside every polygon the ring color fades to white, from
+  //                  the top of the polygon to its bottom (needs gradient = true)
+  // ---------------------------------------------------------------
+  displayExtruded(yawDeg = 45, tiltDeg = 35.264, perspective = 0, bottomY = null,
+                  fill = true, bottomLast = true, extrudeAngle = 90, extrudeLength = null,
+                  gradient = false, gradientFlip = false, fade = true) {
+    const cx = this.position.x
+    const cy = this.position.y
+    if (bottomY === null) bottomY = cy + this.size * 1.5
+
+    const yaw = yawDeg * Math.PI / 180
+    const tilt = tiltDeg * Math.PI / 180
+    const cosY = Math.cos(yaw)
+    const sinY = Math.sin(yaw)
+    const sinT = Math.sin(tilt)
+    const cosT = Math.cos(tilt)
+    const mid = Math.floor(this.rects.length / 2)
+
+    // extrusion direction on screen, and the axis perpendicular to it
+    const ea = extrudeAngle * Math.PI / 180
+    const dirX = Math.cos(ea)
+    const dirY = Math.sin(ea)
+    const perpX = -dirY
+    const perpY = dirX
+
+    // until the flat bottom line (needs a direction that goes downwards),
+    // otherwise a fixed length
+    const toBottom = extrudeLength === null && dirY > 1e-6
+    const L = (extrudeLength === null) ? this.size : extrudeLength
+
+    // figure (x, y) -> floor (u = X, v = Z) -> yaw -> tilt -> screen
+    const project = (x, y) => {
+      const u = x - cx
+      const v = y - cy
+      const X1 = u * cosY + v * sinY
+      const Z1 = -u * sinY + v * cosY          // > 0 = closer to the viewer
+      const away = -Z1 * cosT                  // > 0 = farther from the viewer
+      const f = 1 / (1 + perspective * away)   // perspective scale
+      return { X: cx + X1 * f, Y: cy + Z1 * sinT * f, f, z: away }
+    }
+
+    // 1) sample + project every arc (with its aperture offset applied)
+    const items = []
+
+    const addItem = (pts, closed, index) => {
+      if (!closed && pts.length < 2) return
+
+      // s = position ACROSS the extrusion direction, u = position ALONG it
+      const S = pts.map(q => q.X * perpX + q.Y * perpY)
+      const U = pts.map(q => q.X * dirX + q.Y * dirY)
+      let sum = 0
+      for (const u of U) sum += u
+
+      if (!closed && S[0] > S[S.length - 1]) {   // make S ascending
+        S.reverse()
+        U.reverse()
+      }
+
+      items.push({
+        pts,
+        closed,
+        index,                               // 0 = outermost circle
+        S,
+        U,
+        sMin: Math.min(...S),
+        sMax: Math.max(...S),
+        key: sum / pts.length                // mean position along the extrusion direction
+      })
+    }
+
+    for (let j = 0; j < this.groupLines.length; j++) {
+      const offset = (j == mid) ? 0 : this.offsetFor(j, this.rects.length)
+
+      for (const finalPath of this.groupLines[j]) {
+        const src = finalPath.polygon
+        if (!src || !src.segments || src.segments.length == 0) continue
+
+        const len = src.length
+        if (!len) continue
+
+        const n = Math.max(8, Math.ceil(len / 3))
+        const count = src.closed ? n : n + 1
+        const pts = []
+
+        for (let k = 0; k < count; k++) {
+          const pt = src.getPointAt(Math.min(len, (len * k) / n))
+          if (!pt) continue
+          pts.push(project(pt.x + offset, pt.y))
+        }
+        if (pts.length < 2) continue
+
+        // full circles have no first/last point: outline only
+        if (src.closed) {
+          addItem(pts, true, finalPath.index)
+          continue
+        }
+
+        // An arc can fold back on itself when measured ACROSS the extrusion
+        // direction. Extruding a folded arc as one polygon makes the edges cross
+        // the polygon itself, so cut the arc wherever that coordinate reverses.
+        // Every piece is then a simple "curtain" that can be extruded safely.
+        let start = 0
+        let dir = 0
+        for (let k = 1; k < pts.length; k++) {
+          const ds = (pts[k].X - pts[k - 1].X) * perpX + (pts[k].Y - pts[k - 1].Y) * perpY
+          if (Math.abs(ds) < 1e-6) continue
+          const d = ds > 0 ? 1 : -1
+          if (dir !== 0 && d !== dir) {
+            addItem(pts.slice(start, k), false, finalPath.index)   // start .. k-1
+            start = k - 1                                          // shared turning point
+          }
+          dir = d
+        }
+        addItem(pts.slice(start), false, finalPath.index)
+      }
+    }
+
+    // highest circle index that actually has pieces (used for the color ramp)
+    const maxIndex = items.reduce((m, it) => Math.max(m, it.index), 0)
+
+    // 2) draw order: compare pieces pairwise where they overlap (see orderPieces)
+    //    so that a piece is always drawn AFTER every piece it is in front of.
+    //    For a straight-down extrusion: the lower piece (nearer) goes on top.
+    const ordered = this.orderPieces(items, bottomLast)
+
+    // 3) build the polygons
+    for (const it of ordered) {
+      const pts = it.pts
+      const poly = new p.Path()
+      for (const q of pts) poly.add(new p.Point(q.X, q.Y))
+
+      if (it.closed) {
+        // full circles: just the projected outline
+        poly.closed = true
+        poly.fillColor = null
+      } else if (toBottom) {
+        // slide the first and last point along the direction until y = bottom
+        const endOf = q => {
+          const targetY = cy + (bottomY - cy) * q.f
+          const t = (targetY - q.Y) / dirY
+          return new p.Point(q.X + dirX * t, targetY)
+        }
+        poly.add(endOf(pts[pts.length - 1]))
+        poly.add(endOf(pts[0]))
+        poly.closed = true
+        poly.fillColor = fill ? white : null
+      } else {
+        // fixed length: go back along the arc moved by (dir * L)
+        for (let k = pts.length - 1; k >= 0; k--) {
+          poly.add(new p.Point(pts[k].X + dirX * L, pts[k].Y + dirY * L))
+        }
+        poly.closed = true
+        poly.fillColor = fill ? white : null
+      }
+
+      if (!it.closed && fill && gradient) {
+        const ring = this.ringColor(it.index, maxIndex, gradientFlip)
+
+        if (fade) {
+          // ring color at the top of the polygon -> white at its bottom
+          const b = poly.bounds
+          poly.fillColor = new p.Color({
+            gradient: { stops: [ring, white] },
+            origin: new p.Point(b.center.x, b.top),
+            destination: new p.Point(b.center.x, b.bottom)
+          })
+        } else {
+          poly.fillColor = ring
+        }
+      }
+
+      poly.strokeColor = black
+      poly.strokeWidth = 0
+      this.output(poly)
+    }
+  }
+
+  // Color of a concentric circle: index 0 (outermost) = black ... last (innermost) = white.
+  // Every piece of the same circle gets exactly the same color.
+  ringColor(index, maxIndex, flip = false) {
+    let t = maxIndex > 0 ? index / maxIndex : 0
+    if (flip) t = 1 - t
+
+    const a = black.convert('rgb')
+    const b = white.convert('rgb')
+    return new p.Color(
+      a.red + (b.red - a.red) * t,
+      a.green + (b.green - a.green) * t,
+      a.blue + (b.blue - a.blue) * t
+    )
+  }
+
+  // Draw order for the extruded pieces.
+  // Every piece is a "curtain": measured across the extrusion direction (s) it is a
+  // function u(s), where u is the position along the extrusion direction.
+  // Where two pieces overlap in s, the one with the larger u (further along the
+  // extrusion direction) is in FRONT, so it must be drawn after the other.
+  // That gives a partial order, solved with a topological sort. Ties (and the very
+  // rare cycles) fall back to the mean position `key`.
+  orderPieces(items, bottomLast = true) {
+    const n = items.length
+    const sign = bottomLast ? 1 : -1
+
+    // u at position s (linear interpolation; S is ascending)
+    const at = (pc, s) => {
+      const S = pc.S
+      const U = pc.U
+      let lo = 0
+      let hi = S.length - 1
+      while (hi - lo > 1) {
+        const m = (lo + hi) >> 1
+        if (S[m] <= s) lo = m
+        else hi = m
+      }
+      const ds = S[hi] - S[lo]
+      if (ds < 1e-9) return U[lo]
+      return U[lo] + (U[hi] - U[lo]) * ((s - S[lo]) / ds)
+    }
+
+    const out = Array.from({ length: n }, () => [])   // out[a] = pieces drawn after a
+    const indeg = new Array(n).fill(0)
+
+    for (let a = 0; a < n; a++) {
+      const A = items[a]
+      if (A.closed) continue
+
+      for (let b = a + 1; b < n; b++) {
+        const B = items[b]
+        if (B.closed) continue
+
+        const lo = Math.max(A.sMin, B.sMin)
+        const hi = Math.min(A.sMax, B.sMax)
+        if (hi - lo < 0.5) continue                   // (almost) no overlap
+
+        let d = 0
+        for (const t of [0.2, 0.5, 0.8]) {
+          const s = lo + (hi - lo) * t
+          d += at(B, s) - at(A, s)                    // > 0: B is in front of A
+        }
+        if (Math.abs(d) < 1e-6) continue
+
+        if (d * sign > 0) { out[a].push(b); indeg[b]++ }
+        else { out[b].push(a); indeg[a]++ }
+      }
+    }
+
+    const placed = new Array(n).fill(false)
+    const ready = []
+    for (let i = 0; i < n; i++) if (indeg[i] === 0) ready.push(i)
+
+    const result = []
+    while (result.length < n) {
+      let pick = -1
+
+      if (ready.length > 0) {
+        // smallest key first (largest if bottomLast is false)
+        let bi = 0
+        for (let k = 1; k < ready.length; k++) {
+          if (sign * items[ready[k]].key < sign * items[ready[bi]].key) bi = k
+        }
+        pick = ready[bi]
+        ready.splice(bi, 1)
+      } else {
+        // cycle: force the unplaced piece with the smallest key
+        for (let i = 0; i < n; i++) {
+          if (placed[i]) continue
+          if (pick === -1 || sign * items[i].key < sign * items[pick].key) pick = i
+        }
+      }
+
+      if (placed[pick]) continue
+      placed[pick] = true
+      result.push(items[pick])
+
+      for (const y of out[pick]) {
+        if (placed[y]) continue
+        indeg[y]--
+        if (indeg[y] === 0) ready.push(y)
+      }
+    }
+
+    return result
+  }
+
+  transformVertical() {
+    let mid = Math.floor(this.rects.length / 2)
+
+    for (let j = 0; j < this.groupLines.length; j++) {
+      let offset = (j == mid) ? 0 : this.offsetFor(j, this.rects.length)
+
+      for (let finalPath of this.groupLines[j]) {
+        let src = finalPath.polygon
+        if (!src || !src.segments || src.segments.length == 0) continue
+
+        let path = this.copyPath(src)
+        path.position.y += offset
+        path.rotate(270, this.position)
+        path.strokeColor = black
+        path.fillColor = null
+
+        finalPath.rendered = path
+        this.output(path)
+      }
+    }
+  }
+
+  transformGroups() {
+    this.groupTransforms = []
+
+    let placed = []
+    let pad = 5
+
+    let order = [...Array(this.groupLines.length).keys()]
+    order.sort((a, b) => this.rects[b].bounds.area - this.rects[a].bounds.area)
+
+    for (let j of order) {
+      let baseRect = this.rects[j]
+      let success = false
+      let tries = 0
+      let tx = baseRect.bounds.center.x
+      let ty = baseRect.bounds.center.y
+      let ang = 0
+
+      while (!success && tries < 3000) {
+        ang = r.random_num(0, 360)
+
+        let candidate = baseRect.clone()
+        candidate.rotate(ang)
+
+        let bw = candidate.bounds.width
+        let bh = candidate.bounds.height
+
+        tx = r.random_num(pad + bw / 2, w - pad - bw / 2)
+        ty = r.random_num(pad + bh / 2, h - pad - bh / 2)
+
+        candidate.position = new p.Point(tx, ty)
+        candidate.scale(
+          (candidate.bounds.width + pad) / candidate.bounds.width,
+          (candidate.bounds.height + pad) / candidate.bounds.height
+        )
+
+        let b = candidate.bounds
+        let outside = b.left < pad || b.right > w - pad || b.top < pad || b.bottom > h - pad
+
+        let collide = false
+        if (!outside) {
+          for (let other of placed) {
+            if (
+              candidate.intersects(other) ||
+              candidate.contains(other.bounds.center) ||
+              other.contains(candidate.bounds.center)
+            ) {
+              collide = true
+              break
+            }
+          }
+        }
+
+        if (!outside && !collide) {
+          success = true
+          placed.push(candidate)   // kept for collision checks
+        } else {
+          candidate.remove()
+        }
+        tries++
+      }
+
+      this.groupTransforms[j] = success
+        ? { x: tx, y: ty, rot: ang }
+        : { x: baseRect.bounds.center.x, y: baseRect.bounds.center.y, rot: 0 }
+    }
+
+    // placed rects were only for collision tests
+    placed.forEach(pl => pl.remove())
+
+    for (let j = 0; j < this.groupLines.length; j++) {
+      let t = this.groupTransforms[j]
+      if (!t) continue
+
+      let oldCenter = this.rects[j].bounds.center
+      let newCenter = new p.Point(t.x, t.y)
+
+      for (let finalPath of this.groupLines[j]) {
+        let src = finalPath.polygon
+        if (!src || !src.segments || src.segments.length == 0) continue
+
+        let path = this.copyPath(src)
+        path.position = path.position.subtract(oldCenter).add(newCenter)
+        path.rotate(t.rot, newCenter)
+        path.strokeColor = black
+        path.fillColor = null
+
+        finalPath.rendered = path
+        this.output(path)
+      }
+    }
+  }
+}
