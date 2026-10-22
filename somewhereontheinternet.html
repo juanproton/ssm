@@ -3,7 +3,6 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SERIE 4 — Juan Pedro Vallejo</title>
 
 <style>
 body {
@@ -13,7 +12,7 @@ body {
   background: white;
 }
 
-/* SKETCH (full browser window) */
+/* SKETCH (centered in the browser window) */
 html,
 body {
   height: 100%;
@@ -28,12 +27,19 @@ body {
   height: 100vh;
   height: 100dvh;
   z-index: 1;
+
+  /* center the canvas, whatever size the sketch gives it */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+/* no width / height here: the sketch sets the size of the canvas
+   (canvas.width / canvas.height) and paper.js reads it, so it must not be
+   stretched by CSS */
 #sketch-container canvas {
   display: block;
-  width: 100% !important;
-  height: 100% !important;
+  flex: none;
 }
 </style>
 </head>
@@ -46,8 +52,7 @@ body {
 
 <!-- paper.js + the sketch -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-core.min.js"></script>
-  <script src="setupFunctions.js"></script>
-
+<script src="setupFunctions.js"></script>
 <script src="somewhere.js"></script>
 
 </body>
