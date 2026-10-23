@@ -23,7 +23,7 @@ let config = {
   stroke:false
 }
 let forceSharedEdge = true
-const FILL = 0.6   // fraction of the canvas width the figure occupies at its widest (aperture at max)
+const FILL = 0.5   // fraction of the canvas width the figure occupies at its widest (aperture at max)
 const PAD = 0.6
 const CUTS = 11
 const FREQ = 25
@@ -33,34 +33,34 @@ const FIRST_BLACK = true
 
 const FPS = 14
 const AUTOPLAY = true
-const APERTURE_PERIOD = 24*2.5
+const APERTURE_PERIOD = 12*2.5
 
 const BRUSH = {
   count: 1,
   size: [0.1, 0.25],
   sizeChance: 0.2,
-  sizeEase: 0.2,
+  sizeEase: 0.9,
   colorSpread: true,
   maxTrail: 1400,
-  tailTaper: 0.2,
-  gradientLen: [200, 2000],
+  tailTaper: 0.4,
+  gradientLen: [200, 4000],
   step: 1,
   density: 0,
   holdDots: 0,
   dot: [1.2, 4],
   dotAlpha: [8, 34],
-  hazeAlpha: 100,
-  hazeLayers: 20,
+  hazeAlpha: 150,
+  hazeLayers: 50,
   core: 2,
-  sigma: 0.1,
-  substeps: 4,
+  sigma: 0.9,
+  substeps: 8,
   seed: 7
 }
 
 const AUTO = {
   ring: [0.6, 1.5],
   minHop: 0.3,
-  hopSpeed: [0.03, 1.1],
+  hopSpeed: [0.03, 4.1],
   liftChance: 0,
   strokes: [4, 100],
   strokeLen: [0.01, 4.5],
